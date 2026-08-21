@@ -1,0 +1,14 @@
+{
+  "nyx_profile": {
+    "cpu": "amd",
+    "gpus": ["nvidia"],
+    "march": "x86-64-v4",
+    "virt": "NA",
+    "is_vm": false,
+    "chassis": "Desktop",
+    "is_laptop": false,
+    "has_tpm": true,
+    "secureboot": true,
+    "hostname": "nyx-desktop"
+  }
+}

@@ -1,0 +1,123 @@
+---
+- name: Select CachyOS repo tier for detected microarch
+  ansible.builtin.set_fact:
+    nyx_repos: "{{ nyx_cachy_repos[nyx_profile.march] | default(['cachyos']) }}"
+
+- name: Show selected repos
+  ansible.builtin.debug:
+    msg: "march={{ nyx_profile.march }} -> repos={{ nyx_repos }}"
+
+# NOTE: assumes the CachyOS keyring/mirrorlist are already present (they are if
+# you installed from the CachyOS ISO with "CachyOS Packages" selected). For a
+# from-scratch pacstrap you must install cachyos-keyring + mirrorlists first.
+- name: Ensure repo tiers are present in pacman.conf, highest first
+  ansible.builtin.blockinfile:
+    path: /etc/pacman.conf
+    marker: "# {mark} NYXOS REPOS"
+    insertafter: EOF
+    block: |
+      {% for r in nyx_repos %}
+      [{{ r }}]
+      Include = /etc/pacman.d/cachyos-{{ r | replace('cachyos-', '') }}-mirrorlist
+      {% endfor %}
+  notify: refresh pacman
+
+- name: Protect branding files from package upgrades
+  ansible.builtin.lineinfile:
+    path: /etc/pacman.conf
+    regexp: '^NoUpgrade\s*='
+    line: "NoUpgrade = etc/os-release usr/lib/os-release etc/lsb-release"
+    insertafter: '^\[options\]'
+
+- name: Base packages
+  community.general.pacman:
+    name: "{{ nyx_packages_base + [nyx_kernel, nyx_kernel_headers] }}"
+    state: present
+    update_cache: true
+
+- name: Primary user
+  ansible.builtin.user:
+    name: "{{ nyx_user }}"
+    groups: "{{ nyx_user_groups }}"
+    append: true
+    shell: /usr/bin/fish
+    password: "{{ nyx_password }}"
+  when: nyx_password | default('') | length > 0
+
+- name: Wheel sudo
+  ansible.builtin.copy:
+    content: "%wheel ALL=(ALL:ALL) ALL\n"
+    dest: /etc/sudoers.d/10-wheel
+    mode: "0440"
+    validate: "visudo -cf %s"
+
+# --- AUR helper -----------------------------------------------------------
+# makepkg cannot run as root, so the AUR module runs as nyx_user, which
+# requires passwordless pacman for the duration. Granted here, revoked below.
+- name: Temporary passwordless pacman for AUR builds
+  ansible.builtin.copy:
+    content: "{{ nyx_user }} ALL=(ALL) NOPASSWD: /usr/bin/pacman\n"
+    dest: /etc/sudoers.d/99-nyx-aur-temp
+    mode: "0440"
+    validate: "visudo -cf %s"
+
+- name: Is the AUR helper already installed?
+  ansible.builtin.command: "command -v {{ nyx_aur_helper }}"
+  register: nyx_have_helper
+  changed_when: false
+  failed_when: false
+
+- name: Bootstrap AUR helper
+  when: nyx_have_helper.rc != 0
+  become: true
+  become_user: "{{ nyx_user }}"
+  block:
+    - name: Clone helper PKGBUILD
+      ansible.builtin.git:
+        repo: "https://aur.archlinux.org/{{ nyx_aur_helper }}-bin.git"
+        dest: "/tmp/{{ nyx_aur_helper }}-bin"
+        version: master
+    - name: makepkg -si
+      ansible.builtin.command: makepkg -si --noconfirm
+      args:
+        chdir: "/tmp/{{ nyx_aur_helper }}-bin"
+      changed_when: true
+
+- name: AUR packages
+  kewlfft.aur.aur:
+    name: "{{ nyx_packages_aur }}"
+    use: "{{ nyx_aur_helper }}"
+    state: present
+  become: true
+  become_user: "{{ nyx_user }}"
+  when: nyx_packages_aur | length > 0
+
+- name: Revoke temporary passwordless pacman
+  ansible.builtin.file:
+    path: /etc/sudoers.d/99-nyx-aur-temp
+    state: absent
+
+# --- services -------------------------------------------------------------
+- name: NetworkManager
+  ansible.builtin.systemd_service:
+    name: NetworkManager
+    enabled: true
+    state: started
+
+# sshd on test VMs only; physical machines have no listening service.
+- name: sshd (VM only)
+  ansible.builtin.systemd_service:
+    name: sshd
+    enabled: "{{ nyx_profile.is_vm | bool }}"
+    state: "{{ 'started' if nyx_profile.is_vm | bool else 'stopped' }}"
+
+- name: Harden sshd
+  ansible.builtin.copy:
+    content: |
+      PasswordAuthentication no
+      KbdInteractiveAuthentication no
+      PermitRootLogin no
+    dest: /etc/ssh/sshd_config.d/10-nyxos.conf
+    mode: "0644"
+  when: nyx_profile.is_vm | bool
+  notify: restart sshd

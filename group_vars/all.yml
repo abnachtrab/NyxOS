@@ -1,0 +1,62 @@
+---
+# ---------------------------------------------------------------------------
+# Identity
+# ---------------------------------------------------------------------------
+nyx_name:        "NyxOS"
+nyx_id:          "nyxos"
+nyx_user:        "nyx"
+nyx_user_groups: [wheel, video, audio, input, storage]
+nyx_url:         "https://github.com/CHANGEME/nyxos-installer"
+nyx_accent:      "#9b59b6"          # purple; used by branding + theme templates
+
+# ---------------------------------------------------------------------------
+# Kernel / packages
+# ---------------------------------------------------------------------------
+nyx_kernel:         "linux-cachyos"
+nyx_kernel_headers: "{{ nyx_kernel }}-headers"
+nyx_aur_helper:     "yay"
+
+# CachyOS repo tiers, highest first. detect sets nyx_march; base filters this.
+# VERIFY these names against current CachyOS docs before first real run.
+nyx_cachy_repos:
+  x86-64-v4: [cachyos-v4, cachyos-v3, cachyos]
+  x86-64-v3: [cachyos-v3, cachyos]
+  x86-64-v2: [cachyos]
+  x86-64-v1: [cachyos]
+
+nyx_packages_base:
+  - base-devel
+  - git
+  - ansible-core
+  - openssh
+  - networkmanager
+  - sudo
+  - rsync
+  - man-db
+  - pacman-contrib
+  - reflector
+  - fastfetch
+  - kitty
+  - fish
+  - eza
+  - bat
+  - fd
+  - ripgrep
+  - fzf
+  - zoxide
+  - btop
+  - nvtop
+  - unzip
+  - p7zip
+
+nyx_packages_aur: []                # keep short; least reproducible layer
+
+# ---------------------------------------------------------------------------
+# Backup (roles/backup_rclone)
+# ---------------------------------------------------------------------------
+nyx_rclone_remote:   "onedrive"     # `rclone config` name — configured manually
+nyx_rclone_crypt:    "onedrive-crypt"
+nyx_backup_paths:
+  - "{{ '/home/' + nyx_user + '/Documents' }}"
+  - "{{ '/home/' + nyx_user + '/Projects' }}"
+nyx_backup_oncalendar: "daily"

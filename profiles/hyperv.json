@@ -1,0 +1,14 @@
+{
+  "nyx_profile": {
+    "cpu": "amd",
+    "gpus": [],
+    "march": "x86-64-v4",
+    "virt": "VirtualPC",
+    "is_vm": true,
+    "chassis": "Desktop",
+    "is_laptop": false,
+    "has_tpm": true,
+    "secureboot": false,
+    "hostname": "nyxos-test"
+  }
+}

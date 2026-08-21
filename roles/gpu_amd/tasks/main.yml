@@ -1,0 +1,5 @@
+---
+# TODO — see docs/ROADMAP.md. Stubbed so site.yml runs end to end.
+- name: gpu_amd placeholder
+  ansible.builtin.debug:
+    msg: "role 'gpu_amd' not implemented yet (profile: {{ nyx_profile }})"

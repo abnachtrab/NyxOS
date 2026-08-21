@@ -1,0 +1,74 @@
+---
+# Facts only; this role does not change system state and is safe to run
+# standalone (`--tags detect`). Its output is a single dict, `nyx_profile`.
+# Supplying that dict externally (-e @profiles/foo.json) skips detection,
+# which allows testing hardware paths on machines lacking that hardware.
+
+- name: Check whether a profile was supplied externally
+  ansible.builtin.set_fact:
+    nyx_profile_override: "{{ nyx_profile is defined }}"
+
+- name: Detection
+  when: not nyx_profile_override
+  block:
+
+    - name: Enumerate display controllers (0300 = VGA, 0302 = 3D/hybrid)
+      ansible.builtin.command: lspci -mm -nn -d '::0300' -d '::0302'
+      register: nyx_lspci
+      changed_when: false
+      failed_when: false
+
+    - name: Detect highest supported x86-64 microarch level
+      ansible.builtin.shell:
+        cmd: >
+          /lib/ld-linux-x86-64.so.2 --help
+          | grep -oP 'x86-64-v\d(?=.*supported)'
+          | sort -V | tail -1
+      register: nyx_march_raw
+      changed_when: false
+      failed_when: false
+
+    - name: TPM present?
+      ansible.builtin.stat:
+        path: /sys/class/tpm/tpm0
+      register: nyx_tpm
+
+    - name: Secure Boot state
+      ansible.builtin.command: sbctl status --json
+      register: nyx_sbctl
+      changed_when: false
+      failed_when: false
+
+    - name: Assemble profile
+      ansible.builtin.set_fact:
+        nyx_profile:
+          cpu: "{{ 'amd' if 'AuthenticAMD' in (ansible_processor | join(' '))
+                   else ('intel' if 'GenuineIntel' in (ansible_processor | join(' '))
+                   else 'unknown') }}"
+          gpus: "{{ ((['nvidia'] if '[10de:' in nyx_lspci.stdout else [])
+                   + (['amd']    if ('[1002:' in nyx_lspci.stdout
+                                     or '[1022:' in nyx_lspci.stdout) else [])
+                   + (['intel']  if '[8086:' in nyx_lspci.stdout else [])) }}"
+          march: "{{ nyx_march_raw.stdout | default('x86-64-v1', true) | trim
+                     or 'x86-64-v1' }}"
+          virt: "{{ ansible_virtualization_type | default('NA') }}"
+          is_vm: "{{ (ansible_virtualization_role | default('host')) == 'guest' }}"
+          chassis: "{{ ansible_form_factor | default('Unknown') }}"
+          is_laptop: "{{ (ansible_form_factor | default('')) in
+                         ['Laptop', 'Notebook', 'Portable', 'Sub Notebook'] }}"
+          has_tpm: "{{ nyx_tpm.stat.exists }}"
+          secureboot: "{{ (nyx_sbctl.stdout | from_json).secure_boot
+                          if nyx_sbctl.rc == 0 else false }}"
+          hostname: "{{ ansible_hostname }}"
+
+- name: Show profile
+  ansible.builtin.debug:
+    msg: >-
+      {{ 'OVERRIDE' if nyx_profile_override else 'DETECTED' }}: {{ nyx_profile }}
+
+- name: Persist profile for debugging
+  ansible.builtin.copy:
+    content: "{{ nyx_profile | to_nice_json }}\n"
+    dest: /tmp/nyx_profile.json
+    mode: "0644"
+  become: false

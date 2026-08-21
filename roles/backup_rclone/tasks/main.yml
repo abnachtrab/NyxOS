@@ -1,0 +1,5 @@
+---
+# TODO — see docs/ROADMAP.md. Stubbed so site.yml runs end to end.
+- name: backup_rclone placeholder
+  ansible.builtin.debug:
+    msg: "role 'backup_rclone' not implemented yet (profile: {{ nyx_profile }})"

@@ -1,0 +1,17 @@
+# secrets — never commit
+*vault-password*
+vault.yml
+secrets/
+*.key
+*.pem
+*.cer
+rclone.conf
+
+# machine-local overrides
+profiles/local-*.json
+host_vars/
+
+# junk
+*.retry
+*.log
+__pycache__/

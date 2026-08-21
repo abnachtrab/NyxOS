@@ -1,0 +1,65 @@
+---
+# NyxOS provisioning entrypoint.
+#
+#   ansible-playbook site.yml --ask-become-pass
+#   ansible-playbook site.yml --tags session
+#   ansible-playbook site.yml -e @profiles/nvidia-desktop.json   # force a hw path
+#
+- name: Provision NyxOS
+  hosts: localhost
+  gather_facts: true
+
+  vars_prompt:
+    - name: nyx_password
+      prompt: "Password for the primary user (blank to skip user creation)"
+      private: true
+      encrypt: sha512_crypt
+      confirm: true
+      salt_size: 16
+      unsafe: true
+
+  roles:
+    # ---- always ----------------------------------------------------------
+    - role: detect
+      tags: [always, detect]
+
+    - role: base
+      tags: [base]
+
+    # ---- hardware-conditional --------------------------------------------
+    - role: virt_guest
+      when: nyx_profile.is_vm | bool
+      tags: [virt]
+
+    - role: gpu_nvidia
+      when: "'nvidia' in nyx_profile.gpus and not nyx_profile.is_vm"
+      tags: [gpu, nvidia]
+
+    - role: gpu_amd
+      when: "'amd' in nyx_profile.gpus and not nyx_profile.is_vm"
+      tags: [gpu, amd]
+
+    - role: gpu_intel
+      when: "'intel' in nyx_profile.gpus and not nyx_profile.is_vm"
+      tags: [gpu, intel]
+
+    - role: laptop
+      when: nyx_profile.is_laptop | bool
+      tags: [laptop]
+
+    # ---- userland --------------------------------------------------------
+    - role: session_hyprland
+      tags: [session, hyprland]
+
+    - role: branding
+      tags: [branding]
+
+    - role: backup_rclone
+      when: not (nyx_profile.is_vm | bool)
+      tags: [backup, rclone]
+
+  post_tasks:
+    - name: Profile summary
+      ansible.builtin.debug:
+        var: nyx_profile
+      tags: [always]
