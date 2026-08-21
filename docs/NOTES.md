@@ -31,6 +31,26 @@ relying on it.
 - `march` detection returns `x86-64-v4`; host CPU flags pass through.
 - `has_tpm` true with the vTPM enabled.
 
+## Idempotency traps found on the second base run
+
+- `ansible.builtin.command` cannot run shell builtins. `command -v` there
+  returns rc!=0 forever and silently re-runs whatever it guards.
+- `vars_prompt` with `encrypt:` re-salts every run, so `user:` reports changed
+  unless `update_password: on_create` is set.
+- Create/revoke pairs (the temporary sudoers grant) always report changed
+  unless gated on whether the work between them is actually needed.
+
+## Open questions
+
+- Two user accounts now exist: `adam` (from the CachyOS installer) and
+  `abnac` (created by `roles/base` from `nyx_user`). Pick one. `run.ps1`
+  still SSHes as whichever the checkpoint was made with.
+- `/etc/sudoers.d/10-installer` was left by the CachyOS installer. Check its
+  contents; if it grants passwordless sudo, `roles/base` should remove it.
+- Ansible warns that `/home/<user>/.ansible/tmp` was created 0700. Benign
+  when become_user owns it; breaks if the playbook runs as root against a
+  different `nyx_user`.
+
 ## Known gaps
 
 - No LUKS in `install.sh` yet — p3 is plain ext4 until Phase 10.

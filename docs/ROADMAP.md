@@ -38,13 +38,18 @@ Verified on Hyper-V: `virt=VirtualPC`, `chassis=Desktop`, `march=x86-64-v4`,
 `has_tpm=true`, `secureboot=false` via soft-failed sbctl. `profiles/hyperv.json`
 matches. Dead hypervisor keys pruned from `roles/virt_guest/defaults`.
 
-## Phase 4 — base
+## Phase 4 — base  *(done)*
 
 Repo handling is read-only: the CachyOS installer owns the sections in
 `pacman.conf` and `roles/base` asserts they exist rather than writing them.
 
-Check the AUR bootstrap: `yay --version` as `nyx_user`, and confirm
-`/etc/sudoers.d/99-nyx-aur-temp` is absent after the run.
+Verified: repo assert reads all four sections on Zen 5
+(`cachyos-znver4`, `cachyos-core-znver4`, `cachyos-extra-znver4`, `cachyos`),
+`7zip` resolves, yay bootstraps, temp sudoers grant is revoked.
+
+Second-run idempotency required three fixes; see docs/NOTES.md. Re-run
+`--tags base` twice after any change to this role — the second run is the
+test that matters.
 
 ---
 

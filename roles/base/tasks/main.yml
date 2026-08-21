@@ -48,6 +48,9 @@
     append: true
     shell: "{{ nyx_shell }}"
     password: "{{ nyx_password }}"
+    # vars_prompt salts freshly each run, so the hash always differs from
+    # /etc/shadow. Without this the task reports changed on every play.
+    update_password: on_create
   when: nyx_password | default('') | length > 0
 
 - name: Wheel sudo
@@ -60,18 +63,27 @@
 # --- AUR helper -----------------------------------------------------------
 # makepkg cannot run as root, so the AUR module runs as nyx_user, which
 # requires passwordless pacman for the duration. Granted here, revoked below.
+# `command` is a shell builtin, so ansible.builtin.command cannot run it and
+# would report rc!=0 unconditionally, re-running the bootstrap every play.
+- name: Is the AUR helper already installed?
+  ansible.builtin.shell:
+    cmd: "command -v {{ nyx_aur_helper }}"
+  register: nyx_have_helper
+  changed_when: false
+  failed_when: false
+
+- name: Does this run need AUR work?
+  ansible.builtin.set_fact:
+    nyx_aur_needed: "{{ (nyx_have_helper.rc != 0)
+                        or (nyx_packages_aur | length > 0) }}"
+
 - name: Temporary passwordless pacman for AUR builds
+  when: nyx_aur_needed | bool
   ansible.builtin.copy:
     content: "{{ nyx_user }} ALL=(ALL) NOPASSWD: /usr/bin/pacman\n"
     dest: /etc/sudoers.d/99-nyx-aur-temp
     mode: "0440"
     validate: "visudo -cf %s"
-
-- name: Is the AUR helper already installed?
-  ansible.builtin.command: "command -v {{ nyx_aur_helper }}"
-  register: nyx_have_helper
-  changed_when: false
-  failed_when: false
 
 - name: Bootstrap AUR helper
   when: nyx_have_helper.rc != 0
@@ -102,6 +114,7 @@
   ansible.builtin.file:
     path: /etc/sudoers.d/99-nyx-aur-temp
     state: absent
+  when: nyx_aur_needed | bool
 
 # --- services -------------------------------------------------------------
 - name: NetworkManager
