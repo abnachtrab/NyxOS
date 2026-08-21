@@ -40,7 +40,7 @@
     name: "{{ nyx_user }}"
     groups: "{{ nyx_user_groups }}"
     append: true
-    shell: /usr/bin/fish
+    shell: "{{ nyx_shell }}"
     password: "{{ nyx_password }}"
   when: nyx_password | default('') | length > 0
 
