@@ -1,6 +1,6 @@
 ---
-# ansible_virtualization_type reports Hyper-V as "VirtualPC" on some kernels
-# and "Hyper-V" on others; both keys are present until confirmed.
+# Keyed on ansible_virtualization_type. Hyper-V reports "VirtualPC"
+# (confirmed on linux-cachyos under Hyper-V Gen 2).
 nyx_virt_packages:
   VirtualPC:  [hyperv]
   VMware:     [open-vm-tools]

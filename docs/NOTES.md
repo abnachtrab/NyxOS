@@ -9,17 +9,22 @@ relying on it.
   documentation.
 - **`sbctl status --json` field names** — `setup_mode`, `secure_boot`,
   `installed` are what `roles/detect` reads. Confirm on the installed version.
-- **`ansible_virtualization_type` value for Hyper-V.** Reports `VirtualPC` on
-  some kernels, `Hyper-V` on others. Both keys exist in
-  `roles/virt_guest/defaults`; determine which fires and remove the other.
-- **`ansible_form_factor` inside Hyper-V.** May be `Other` or `Unknown`
-  rather than `Desktop`; `is_laptop` depends on the string matching.
+  The failure path is verified: with sbctl absent the task fails soft and
+  `secureboot` falls back to `false`.
 - **Hyper-V framebuffer module** — `hyperv_drm` on current kernels,
   `hyperv_fb` on older. The `video=` cmdline param differs.
 - **nvidia-open vs proprietary cutoff.** Turing and newer for open modules;
   recent driver branches dropped Maxwell/Pascal/Volta entirely.
 - **Intel media driver split.** `intel-media-driver` for Gen8+,
   `libva-intel-driver` below. `i915` vs `xe` on the newest parts.
+
+## Verified on Hyper-V (Gen 2, linux-cachyos, Zen 5 host)
+
+- `ansible_virtualization_type` returns `VirtualPC`. Other keys pruned.
+- `ansible_form_factor` returns `Desktop`, so `is_laptop` string matching
+  works and should behave on the Surface.
+- `march` detection returns `x86-64-v4`; host CPU flags pass through.
+- `has_tpm` true with the vTPM enabled.
 
 ## Known gaps
 

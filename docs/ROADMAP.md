@@ -32,17 +32,23 @@ Clone, `ansible-galaxy collection install -r requirements.yml`, VS Code
 Remote-SSH. Confirm `.\run.ps1 -Tags detect` runs without manual intervention before
 proceeding.
 
-## Phase 3 — detect
+## Phase 3 — detect  *(done)*
 
-Run it, capture the output as `profiles/hyperv.json`, sanity-check that
-`virt` and `march` match reality. Verify the `sbctl status --json` field
-names against the installed version — they've moved between releases.
+Verified on Hyper-V: `virt=VirtualPC`, `chassis=Desktop`, `march=x86-64-v4`,
+`has_tpm=true`, `secureboot=false` via soft-failed sbctl. `profiles/hyperv.json`
+matches. Dead hypervisor keys pruned from `roles/virt_guest/defaults`.
 
 ## Phase 4 — base
 
-Confirm the repo tier written into `pacman.conf` matches `nyx_profile.march`,
-and that the mirrorlist paths in the blockinfile template match what CachyOS
-actually ships. Then check the AUR bootstrap: `yay --version` as `nyx_user`,
+Before running, inspect what the CachyOS installer already wrote:
+
+    grep -A2 '^\[cachyos' /etc/pacman.conf
+    ls /etc/pacman.d/ | grep -i cachy
+
+`roles/base` assumes `/etc/pacman.d/cachyos-v4-mirrorlist`. Correct the
+blockinfile to match reality first, or it appends duplicate sections with
+broken Include paths. Then confirm the tier written matches
+`nyx_profile.march`. Then check the AUR bootstrap: `yay --version` as `nyx_user`,
 and confirm `/etc/sudoers.d/99-nyx-aur-temp` is gone at the end.
 
 ---

@@ -3,7 +3,7 @@
 #
 #   ansible-playbook site.yml --ask-become-pass
 #   ansible-playbook site.yml --tags session
-#   ansible-playbook site.yml -e @profiles/nvidia-desktop.json   # force a hw path
+#   ansible-playbook site.yml -e @profiles/nvidia-desktop-v4.json  # force a hw path
 #
 - name: Provision NyxOS
   hosts: localhost
@@ -17,6 +17,9 @@
       confirm: true
       salt_size: 16
       unsafe: true
+      # vars_prompt is evaluated before tags, so a detect-only run would
+      # otherwise prompt for a password it never consumes.
+      when: "'base' in ansible_run_tags or 'all' in ansible_run_tags"
 
   roles:
     # ---- always ----------------------------------------------------------

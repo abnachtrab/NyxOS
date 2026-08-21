@@ -50,8 +50,9 @@ nyx_packages_base:
   - zoxide
   - btop
   - nvtop
+  - zip
   - unzip
-  - p7zip
+  - 7zip
 
 nyx_packages_aur: []                # keep short; least reproducible layer
 
