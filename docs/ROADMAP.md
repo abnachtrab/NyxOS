@@ -71,16 +71,21 @@ recovery.
 VM branch: blur and animations off, `misc:no_direct_scanout`, forced
 resolution. Hyprland's default effects perform poorly under llvmpipe.
 
-## Phase 6 — gpu_*
+## Phase 6 — gpu
 
-- **nvidia** — Turing+ → `nvidia-open-dkms`, older → proprietary/legacy branch.
-  `nvidia_drm.modeset=1`, early KMS modules, env vars in Hyprland config.
-  `WLR_NO_HARDWARE_CURSORS` is obsolete on current drivers; do not set it.
-- **amd** — mesa, vulkan-radeon, lib32-*.
-- **intel** — vulkan-intel, intel-media-driver (Gen8+) vs libva-intel-driver.
+Collapsed from three roles into one. `chwd -a` picks the driver profile; the
+role only adds early KMS modules and `nvidia_drm.modeset=1`, and
+`roles/session_hyprland` writes the compositor env vars.
 
 Headers must match `nyx_kernel` or DKMS produces no module without erroring.
-Only testable via `-e @profiles/...` until deployed to hardware.
+Untestable in Hyper-V (no PCI GPU) — use `-e @profiles/...` or wait for
+hardware.
+
+## Phase 6b — theme
+
+Palette renders cleanly to shell/CSS/Hyprland/kitty/waybar. Remaining
+consumers are the ones that need a real theme package rather than a colour
+file: SDDM, GTK, Kvantum, rEFInd, Plymouth.
 
 ## Phase 7 — branding
 

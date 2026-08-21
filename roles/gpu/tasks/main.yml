@@ -1,0 +1,48 @@
+---
+# Driver selection is delegated to chwd, CachyOS's hardware detection tool.
+# It maintains the generation split that would otherwise be hardcoded here
+# (nvidia-open-dkms for Turing+, nvidia-dkms-580xx, nvidia-dkms-470xx for
+# legacy parts), plus .prime variants for hybrid laptops, amd, intel,
+# nouveau, and non-GPU quirks such as broadcom-wl and handheld profiles.
+#
+# This role handles the part chwd does not: kernel cmdline flags and early
+# KMS. Compositor env vars live in roles/session_hyprland.
+
+- name: List profiles chwd would apply
+  ansible.builtin.command: chwd --list
+  register: nyx_chwd_list
+  changed_when: false
+  failed_when: false
+
+- name: Show chwd view of this hardware
+  ansible.builtin.debug:
+    var: nyx_chwd_list.stdout_lines
+
+- name: Autoconfigure drivers
+  ansible.builtin.command: chwd -a
+  register: nyx_chwd_run
+  changed_when: >-
+    'No device of class' not in (nyx_chwd_run.stderr | default(''))
+    and 'already installed' not in (nyx_chwd_run.stdout | default(''))
+  failed_when: false
+
+- name: NVIDIA kernel integration
+  when: "'nvidia' in nyx_profile.gpus"
+  tags: [nvidia]
+  block:
+
+    - name: Early KMS modules in mkinitcpio
+      ansible.builtin.lineinfile:
+        path: /etc/mkinitcpio.conf
+        regexp: '^MODULES='
+        line: "MODULES=({{ nyx_nvidia_kms_modules | join(' ') }})"
+      notify: rebuild initramfs
+
+    - name: nvidia_drm.modeset on the kernel cmdline
+      ansible.builtin.lineinfile:
+        path: /etc/kernel/cmdline
+        regexp: 'nvidia_drm\.modeset'
+        line: "{{ nyx_kernel_cmdline }} nvidia_drm.modeset=1"
+        create: true
+        mode: "0644"
+      notify: rebuild initramfs

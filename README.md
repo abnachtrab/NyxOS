@@ -1,8 +1,12 @@
-# NyxOS
+# CirraOS
 
 Ansible-based provisioning for my personal machines. CachyOS base, Hyprland
 session, hardware detection at runtime so one playbook covers a Hyper-V VM,
 an Intel laptop, and an NVIDIA desktop.
+
+The Cirra palette is pastel accents on a near-black base. It is defined once
+in `roles/theme/defaults/main.yml` and rendered into shell, CSS, Hyprland,
+kitty, and waybar formats; no other file contains a hex value.
 
 ## Design
 
@@ -23,7 +27,7 @@ can be exercised from a VM with no GPU.
 | key | source | drives |
 |---|---|---|
 | `cpu` | `ansible_processor` | microcode |
-| `gpus` | `lspci -d ::0300 -d ::0302` | driver role selection (list; hybrid laptops have two) |
+| `gpus` | `lspci -d ::0300 -d ::0302` | NVIDIA-specific KMS/cmdline work (chwd handles driver choice) |
 | `march` | `ld-linux-x86-64.so.2 --help` | CachyOS v3/v4 repo tier |
 | `virt` / `is_vm` | `ansible_virtualization_*` | guest tooling; skips GPU and power roles |
 | `is_laptop` | `ansible_form_factor` | power management, sensors |
@@ -41,7 +45,8 @@ group_vars/all.yml    package lists, identity, kernel choice
 roles/detect/         facts only, never mutates
 roles/base/           repos, packages, user, AUR helper, sshd
 roles/virt_guest/     per-hypervisor guest tooling
-roles/gpu_*/          driver stacks
+roles/gpu/            chwd autoconfigure + KMS/cmdline integration
+roles/theme/          Cirra palette rendered into per-app formats
 roles/session_hyprland/
 roles/branding/       os-release et al
 roles/backup_rclone/  OneDrive sync via systemd timer
@@ -84,7 +89,8 @@ per-machine and never leave it. `gitleaks` runs as a pre-commit hook.
 - [x] base
 - [x] virt_guest
 - [ ] session_hyprland
-- [ ] gpu_nvidia / gpu_amd / gpu_intel
+- [ ] gpu
+- [ ] theme
 - [ ] laptop
 - [ ] branding
 - [ ] backup_rclone

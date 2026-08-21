@@ -1,0 +1,4 @@
+---
+- name: rebuild initramfs
+  ansible.builtin.command: mkinitcpio -P
+  changed_when: true

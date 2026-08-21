@@ -31,23 +31,19 @@
       when: nyx_profile.is_vm | bool
       tags: [virt]
 
-    - role: gpu_nvidia
-      when: "'nvidia' in nyx_profile.gpus and not nyx_profile.is_vm"
-      tags: [gpu, nvidia]
-
-    - role: gpu_amd
-      when: "'amd' in nyx_profile.gpus and not nyx_profile.is_vm"
-      tags: [gpu, amd]
-
-    - role: gpu_intel
-      when: "'intel' in nyx_profile.gpus and not nyx_profile.is_vm"
-      tags: [gpu, intel]
+    # One role; chwd selects the driver profile itself.
+    - role: gpu
+      when: not (nyx_profile.is_vm | bool)
+      tags: [gpu]
 
     - role: laptop
       when: nyx_profile.is_laptop | bool
       tags: [laptop]
 
     # ---- userland --------------------------------------------------------
+    - role: theme
+      tags: [theme]
+
     - role: session_hyprland
       tags: [session, hyprland]
 

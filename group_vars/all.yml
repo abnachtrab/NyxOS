@@ -2,12 +2,14 @@
 # ---------------------------------------------------------------------------
 # Identity
 # ---------------------------------------------------------------------------
-nyx_name:        "NyxOS"
-nyx_id:          "nyxos"
+nyx_name:        "CirraOS"
+nyx_id:          "cirraos"
 nyx_user:        "abnac"
 nyx_user_groups: [wheel, video, audio, input, storage]
 nyx_url:         "https://github.com/abnachtrab/NyxOS"
-nyx_accent:      "#9b59b6"          # purple; used by branding + theme templates
+# Palette lives in roles/theme/defaults/main.yml. Nothing else
+# hardcodes a hex value.
+nyx_accent:      "#C7B8E8"          # haze, primary
 
 # ---------------------------------------------------------------------------
 # Kernel / packages / shell

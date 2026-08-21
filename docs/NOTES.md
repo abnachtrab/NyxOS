@@ -51,6 +51,20 @@ relying on it.
   when become_user owns it; breaks if the playbook runs as root against a
   different `nyx_user`.
 
+## Theme
+
+Palette and semantic role map live in `roles/theme/defaults/main.yml`.
+Applications consume role names (primary, success, panel) rather than colour
+names, so reassigning a role is one line.
+
+Adding an application: write a template in `roles/theme/templates/`, add a
+line to `cirra_theme_targets`. Do not put hex values anywhere else.
+
+Primary is haze `#C7B8E8` (pastel purple), secondary is cirrus `#B4CDE6`.
+
+Still unthemed: SDDM/greeter, GTK, Qt (Kvantum), rEFInd, Plymouth, bat, fzf,
+zsh syntax highlighting, btop.
+
 ## Known gaps
 
 - No LUKS in `install.sh` yet — p3 is plain ext4 until Phase 10.

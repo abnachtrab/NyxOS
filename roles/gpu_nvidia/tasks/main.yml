@@ -1,5 +1,0 @@
----
-# TODO — see docs/ROADMAP.md. Stubbed so site.yml runs end to end.
-- name: gpu_nvidia placeholder
-  ansible.builtin.debug:
-    msg: "role 'gpu_nvidia' not implemented yet (profile: {{ nyx_profile }})"

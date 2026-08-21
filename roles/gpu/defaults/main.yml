@@ -1,0 +1,10 @@
+---
+nyx_nvidia_kms_modules:
+  - nvidia
+  - nvidia_modeset
+  - nvidia_uvm
+  - nvidia_drm
+
+# WLR_NO_HARDWARE_CURSORS is obsolete on current drivers and deliberately
+# not set; explicit sync landed in the 555 series.
+nyx_kernel_cmdline: "quiet nowatchdog"
