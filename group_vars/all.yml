@@ -37,7 +37,7 @@ nyx_packages_base:
   - reflector
   - fastfetch
   - kitty
-  - fish
+  - zsh
   - eza
   - bat
   - fd
