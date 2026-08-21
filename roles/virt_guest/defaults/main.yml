@@ -5,12 +5,10 @@ nyx_virt_packages:
   VirtualPC:  [hyperv]
   VMware:     [open-vm-tools]
   kvm:        [qemu-guest-agent, spice-vdagent]
-  KVM:        [qemu-guest-agent, spice-vdagent]
   virtualbox: [virtualbox-guest-utils]
 
 nyx_virt_services:
   VirtualPC:  [hv_fcopy_daemon, hv_kvp_daemon, hv_vss_daemon]
   VMware:     [vmtoolsd]
   kvm:        [qemu-guest-agent]
-  KVM:        [qemu-guest-agent]
   virtualbox: [vboxservice]
