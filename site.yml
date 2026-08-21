@@ -17,9 +17,6 @@
       confirm: true
       salt_size: 16
       unsafe: true
-      # vars_prompt is evaluated before tags, so a detect-only run would
-      # otherwise prompt for a password it never consumes.
-      when: "'base' in ansible_run_tags or 'all' in ansible_run_tags"
 
   roles:
     # ---- always ----------------------------------------------------------
