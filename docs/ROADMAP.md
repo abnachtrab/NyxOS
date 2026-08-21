@@ -40,16 +40,11 @@ matches. Dead hypervisor keys pruned from `roles/virt_guest/defaults`.
 
 ## Phase 4 — base
 
-Before running, inspect what the CachyOS installer already wrote:
+Repo handling is read-only: the CachyOS installer owns the sections in
+`pacman.conf` and `roles/base` asserts they exist rather than writing them.
 
-    grep -A2 '^\[cachyos' /etc/pacman.conf
-    ls /etc/pacman.d/ | grep -i cachy
-
-`roles/base` assumes `/etc/pacman.d/cachyos-v4-mirrorlist`. Correct the
-blockinfile to match reality first, or it appends duplicate sections with
-broken Include paths. Then confirm the tier written matches
-`nyx_profile.march`. Then check the AUR bootstrap: `yay --version` as `nyx_user`,
-and confirm `/etc/sudoers.d/99-nyx-aur-temp` is gone at the end.
+Check the AUR bootstrap: `yay --version` as `nyx_user`, and confirm
+`/etc/sudoers.d/99-nyx-aur-temp` is absent after the run.
 
 ---
 

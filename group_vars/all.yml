@@ -17,13 +17,9 @@ nyx_kernel_headers: "{{ nyx_kernel }}-headers"
 nyx_aur_helper:     "yay"
 nyx_shell: /usr/bin/zsh
 
-# CachyOS repo tiers, highest first. detect sets nyx_march; base filters this.
-# VERIFY these names against current CachyOS docs before first real run.
-nyx_cachy_repos:
-  x86-64-v4: [cachyos-v4, cachyos-v3, cachyos]
-  x86-64-v3: [cachyos-v3, cachyos]
-  x86-64-v2: [cachyos]
-  x86-64-v1: [cachyos]
+# Repo sections are configured by the CachyOS installer and read by
+# roles/base. nyx_profile.march is used by scripts/install.sh when selecting
+# a tier for a from-scratch pacstrap.
 
 nyx_packages_base:
   - base-devel

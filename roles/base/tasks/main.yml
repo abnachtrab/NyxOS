@@ -1,26 +1,32 @@
 ---
-- name: Select CachyOS repo tier for detected microarch
-  ansible.builtin.set_fact:
-    nyx_repos: "{{ nyx_cachy_repos[nyx_profile.march] | default(['cachyos']) }}"
+# The CachyOS installer writes the repo sections for the detected CPU tier and
+# owns pacman.conf thereafter. Section names are generation-specific
+# (cachyos-znver4, cachyos-core-znver4, cachyos-extra-znver4 on Zen 4+;
+# cachyos-v3 on other v3-capable CPUs) and do not map cleanly from the
+# x86-64-vN level, so this role reads the configuration rather than writing it.
+# Appending sections here produces duplicate-repo warnings at best and broken
+# Include paths at worst.
+- name: Read configured CachyOS repos
+  ansible.builtin.shell:
+    cmd: |
+      grep -oP '^\[\Kcachyos[^]]*' /etc/pacman.conf || true
+  register: nyx_repos_found
+  changed_when: false
 
-- name: Show selected repos
+- name: Require at least one CachyOS repo
+  ansible.builtin.assert:
+    that: nyx_repos_found.stdout_lines | length > 0
+    fail_msg: >-
+      No CachyOS repositories found in /etc/pacman.conf. Install from the
+      CachyOS ISO with "CachyOS Packages" selected, or add cachyos-keyring
+      and the mirrorlists before running this role.
+    success_msg: "CachyOS repos present"
+
+- name: Show detected microarch and active repos
   ansible.builtin.debug:
-    msg: "march={{ nyx_profile.march }} -> repos={{ nyx_repos }}"
-
-# NOTE: assumes the CachyOS keyring/mirrorlist are already present (they are if
-# you installed from the CachyOS ISO with "CachyOS Packages" selected). For a
-# from-scratch pacstrap you must install cachyos-keyring + mirrorlists first.
-- name: Ensure repo tiers are present in pacman.conf, highest first
-  ansible.builtin.blockinfile:
-    path: /etc/pacman.conf
-    marker: "# {mark} NYXOS REPOS"
-    insertafter: EOF
-    block: |
-      {% for r in nyx_repos %}
-      [{{ r }}]
-      Include = /etc/pacman.d/cachyos-{{ r | replace('cachyos-', '') }}-mirrorlist
-      {% endfor %}
-  notify: refresh pacman
+    msg: >-
+      march={{ nyx_profile.march }}
+      repos={{ nyx_repos_found.stdout_lines }}
 
 - name: Protect branding files from package upgrades
   ansible.builtin.lineinfile:

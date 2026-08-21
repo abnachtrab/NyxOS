@@ -3,8 +3,6 @@
 Written from memory during design. Verify each against upstream before
 relying on it.
 
-- **CachyOS repo section names and mirrorlist paths.** `roles/base` assumes
-  `cachyos-v3`/`cachyos-v4` and `/etc/pacman.d/cachyos-v3-mirrorlist`. These have been reorganised in the past.
 - **CachyOS signing key ID** for the archiso build host. Take it from the official install
   documentation.
 - **`sbctl status --json` field names** — `setup_mode`, `secure_boot`,
@@ -20,6 +18,13 @@ relying on it.
 
 ## Verified on Hyper-V (Gen 2, linux-cachyos, Zen 5 host)
 
+- CachyOS repo sections on a Zen 5 install are `cachyos-znver4`,
+  `cachyos-core-znver4`, `cachyos-extra-znver4`, plus generic `cachyos`.
+  All four Include `/etc/pacman.d/cachyos-v4-mirrorlist` or
+  `cachyos-mirrorlist`. Section names are Zen-generation-specific and do not
+  derive from the x86-64-vN level, so `roles/base` reads them instead of
+  generating them. The v3 naming on Intel hardware is still unconfirmed;
+  check on the Surface.
 - `ansible_virtualization_type` returns `VirtualPC`. Other keys pruned.
 - `ansible_form_factor` returns `Desktop`, so `is_laptop` string matching
   works and should behave on the Surface.
