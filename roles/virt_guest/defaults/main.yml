@@ -3,7 +3,6 @@
 # and "Hyper-V" on others; both keys are present until confirmed.
 nyx_virt_packages:
   VirtualPC:  [hyperv]
-  Hyper-V:    [hyperv]
   VMware:     [open-vm-tools]
   kvm:        [qemu-guest-agent, spice-vdagent]
   KVM:        [qemu-guest-agent, spice-vdagent]
@@ -11,7 +10,6 @@ nyx_virt_packages:
 
 nyx_virt_services:
   VirtualPC:  [hv_fcopy_daemon, hv_kvp_daemon, hv_vss_daemon]
-  Hyper-V:    [hv_fcopy_daemon, hv_kvp_daemon, hv_vss_daemon]
   VMware:     [vmtoolsd]
   kvm:        [qemu-guest-agent]
   KVM:        [qemu-guest-agent]
