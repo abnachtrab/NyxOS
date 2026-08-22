@@ -27,10 +27,6 @@
       tags: [base]
 
     # ---- hardware-conditional --------------------------------------------
-    - role: virt_guest
-      when: nyx_profile.is_vm | bool
-      tags: [virt]
-
     # One role; chwd selects the driver profile itself.
     - role: gpu
       when: not (nyx_profile.is_vm | bool)

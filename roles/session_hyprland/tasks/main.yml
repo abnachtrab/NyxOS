@@ -123,9 +123,10 @@
     name: greetd
     enabled: true
 
-- name: Report VM rendering note
+- name: Report software rendering
   ansible.builtin.debug:
     msg: >-
-      VM detected: blur and animations disabled, direct scanout off.
-      Hyprland renders through llvmpipe here.
+      VM detected: software GL enabled so Hyprland can start. Visual effects
+      are unchanged (nyx_hypr_effects={{ nyx_hypr_effects }}) — this is a
+      design surface, so it should look like the real thing.
   when: nyx_profile.is_vm | bool

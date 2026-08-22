@@ -209,3 +209,32 @@ Four config errors on the first real session, all fixed:
 
 `hyprctl configerrors` lists parse failures in a running session and is the
 fastest way to catch these.
+
+## The VM is a design surface, not a performance target
+
+`is_vm` no longer changes anything cosmetic. `hyprland.conf` renders
+byte-identical on Hyper-V and on bare metal — blur, shadows, rounding, and
+animations are all on. The point of the VM is tuning how things look, which
+is impossible if the VM turns the looks off.
+
+`is_vm` still gates the things that are functional:
+
+- **Software GL** (`WLR_RENDERER_ALLOW_SOFTWARE`, `LIBGL_ALWAYS_SOFTWARE` in
+  `conf.d/env.conf`). Hyper-V exposes no DRI device, so without these
+  Hyprland refuses to start. This is not a slow-vs-fast setting.
+- **sshd** (`roles/base`) — enabled on test VMs only.
+
+`nyx_hypr_effects` is the separate escape hatch: set it false if llvmpipe
+becomes too slow to work in. It is not inferred from anything.
+
+## No guest tooling
+
+`roles/virt_guest` was removed. The VM is a disposable design surface, not
+something that needs integration services, clipboard sharing, or a guest
+agent. `is_vm` now gates exactly three things:
+
+- software GL in `conf.d/env.conf` (required for Hyprland to start)
+- sshd in `roles/base`
+- skipping `roles/gpu` and `roles/backup_rclone`
+
+`nyx_profile.virt` is still detected and reported. Nothing consumes it.

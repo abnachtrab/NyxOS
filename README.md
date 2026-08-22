@@ -29,7 +29,7 @@ can be exercised from a VM with no GPU.
 | `cpu` | `ansible_processor` | microcode |
 | `gpus` | `lspci -d ::0300 -d ::0302` | NVIDIA-specific KMS/cmdline work (chwd handles driver choice) |
 | `march` | `ld-linux-x86-64.so.2 --help` | CachyOS v3/v4 repo tier |
-| `virt` / `is_vm` | `ansible_virtualization_*` | guest tooling; skips GPU and power roles |
+| `virt` / `is_vm` | `ansible_virtualization_*` | software GL, sshd; skips GPU and backup roles |
 | `has_tpm` | `/sys/class/tpm/tpm0` | LUKS TPM enrolment |
 | `secureboot` | `sbctl status --json` | signing |
 
@@ -43,7 +43,6 @@ site.yml              entrypoint; role gating lives here, not inside roles
 group_vars/all.yml    package lists, identity, kernel choice
 roles/detect/         facts only, never mutates
 roles/base/           repos, packages, user, AUR helper, sshd
-roles/virt_guest/     per-hypervisor guest tooling
 roles/gpu/            chwd autoconfigure + KMS/cmdline integration
 roles/theme/          NyxOS palette rendered into per-app formats
 roles/session_hyprland/
@@ -99,7 +98,6 @@ per-machine and never leave it. `gitleaks` runs as a pre-commit hook.
 
 - [x] detect
 - [x] base
-- [x] virt_guest
 - [x] session_hyprland
 - [ ] gpu
 - [ ] theme

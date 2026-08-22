@@ -24,15 +24,8 @@ input {
 }
 
 decoration {
-{% if nyx_profile.is_vm | bool %}
-    # llvmpipe: blur and shadows are unusable at any meaningful cost
-    blur {
-        enabled = false
-    }
-    shadow {
-        enabled = false
-    }
-{% else %}
+    rounding = 10
+{% if nyx_hypr_effects %}
     blur {
         enabled = true
         size = 6
@@ -43,25 +36,29 @@ decoration {
         range = 12
         render_power = 2
     }
+{% else %}
+    blur {
+        enabled = false
+    }
+    shadow {
+        enabled = false
+    }
 {% endif %}
 }
 
 animations {
-{% if nyx_profile.is_vm | bool %}
-    enabled = false
-{% else %}
+{% if nyx_hypr_effects %}
     enabled = true
     bezier = smooth, 0.05, 0.9, 0.1, 1.0
     animation = windows, 1, 4, smooth
     animation = fade, 1, 4, smooth
     animation = workspaces, 1, 5, smooth
+{% else %}
+    enabled = false
 {% endif %}
 }
 
 misc {
     disable_hyprland_logo = true
     disable_splash_rendering = true
-{% if nyx_profile.is_vm | bool %}
-    no_direct_scanout = true
-{% endif %}
 }

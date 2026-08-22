@@ -64,5 +64,10 @@ nyx_hypr_conf_parts:
 # roles/branding ships one; a missing path makes hyprlock/hyprlogin
 # fail to draw a background rather than falling back.
 nyx_hypr_wallpaper: ""
+# Visual effects are NOT tied to is_vm. The VM is a design surface: blur and
+# animations must render there or they cannot be tuned. Set false only if
+# software rendering becomes too slow to work in.
+nyx_hypr_effects: true
+
 nyx_hypr_idle_lock_secs: 300
 nyx_hypr_idle_dpms_secs: 600

@@ -34,9 +34,9 @@ proceeding.
 
 ## Phase 3 — detect  *(done)*
 
-Verified on Hyper-V: `virt=VirtualPC`, `chassis=Desktop`, `march=x86-64-v4`,
+Verified on Hyper-V: `virt=VirtualPC`, `march=x86-64-v4`,
 `has_tpm=true`, `secureboot=false` via soft-failed sbctl. `profiles/hyperv.json`
-matches. Dead hypervisor keys pruned from `roles/virt_guest/defaults`.
+matches.
 
 ## Phase 4 — base  *(done)*
 
@@ -65,8 +65,9 @@ profile; keybinds and rules are static.
 - **Both portals installed**, with `hyprland-portals.conf` setting the
   preference explicitly. Without it the backend is chosen by filename sort
   order and screenshare breaks non-deterministically.
-- **VM branch**: no blur, shadows, or animations; `no_direct_scanout`;
-  software GL. Hyprland's defaults are unusable under llvmpipe.
+- **VM branch is functional only**: software GL, so Hyprland can start at
+  all under Hyper-V. Effects are NOT disabled — the VM is where the theme
+  gets tuned. `nyx_hypr_effects` is a separate manual toggle.
 - **GPU branch** in `conf.d/env.conf`: nvidia / radeonsi / iHD.
   `WLR_NO_HARDWARE_CURSORS` deliberately omitted — obsolete since 555.
 
