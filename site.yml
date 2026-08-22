@@ -36,10 +36,6 @@
       when: not (nyx_profile.is_vm | bool)
       tags: [gpu]
 
-    - role: laptop
-      when: nyx_profile.is_laptop | bool
-      tags: [laptop]
-
     # ---- userland --------------------------------------------------------
     - role: theme
       tags: [theme]
