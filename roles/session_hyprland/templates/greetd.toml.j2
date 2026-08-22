@@ -1,0 +1,12 @@
+[terminal]
+vt = 1
+
+[default_session]
+{% if nyx_hypr_greeter == 'hyprlogin' %}
+# hyprlogin runs inside a minimal Hyprland instance. Verify this path after
+# updates — hyprlogin is work in progress and ships only as an AUR git build.
+command = "start-hyprland -- --config /usr/share/hyprlogin/hyprland-greeter.conf"
+{% else %}
+command = "tuigreet --time --remember --remember-session --cmd Hyprland"
+{% endif %}
+user = "greeter"

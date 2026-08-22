@@ -1,5 +1,120 @@
 ---
-# TODO — see docs/ROADMAP.md. Stubbed so site.yml runs end to end.
-- name: session_hyprland placeholder
+- name: Hyprland packages
+  community.general.pacman:
+    name: "{{ nyx_hypr_packages_core
+              + nyx_hypr_packages_shell
+              + nyx_hypr_packages_support
+              + nyx_hypr_dm_packages
+              + [nyx_hypr_terminal] }}"
+    state: present
+
+- name: Config directories
+  ansible.builtin.file:
+    path: "/home/{{ nyx_user }}/{{ item }}"
+    state: directory
+    owner: "{{ nyx_user }}"
+    group: "{{ nyx_user }}"
+    mode: "0755"
+  loop:
+    - .config/hypr
+    - .config/hypr/conf.d
+    - .config/waybar
+    - .config/xdg-desktop-portal
+    - .config/swaync
+
+# roles/theme owns conf.d/theme.conf; this role owns everything else there.
+- name: Hyprland entrypoint
+  ansible.builtin.template:
+    src: hyprland.conf.j2
+    dest: "/home/{{ nyx_user }}/.config/hypr/hyprland.conf"
+    owner: "{{ nyx_user }}"
+    group: "{{ nyx_user }}"
+    mode: "0644"
+
+- name: Hyprland config parts
+  ansible.builtin.template:
+    src: "conf.d/{{ item }}.conf.j2"
+    dest: "/home/{{ nyx_user }}/.config/hypr/conf.d/{{ item }}.conf"
+    owner: "{{ nyx_user }}"
+    group: "{{ nyx_user }}"
+    mode: "0644"
+  loop: "{{ nyx_hypr_conf_parts }}"
+
+- name: hyprlock / hyprpaper / hypridle
+  ansible.builtin.template:
+    src: "{{ item }}.conf.j2"
+    dest: "/home/{{ nyx_user }}/.config/hypr/{{ item }}.conf"
+    owner: "{{ nyx_user }}"
+    group: "{{ nyx_user }}"
+    mode: "0644"
+  loop: [hyprlock, hyprpaper, hypridle]
+
+# Without an explicit preference the portal backend is chosen by whichever
+# .portal file sorts first, which breaks screenshare non-deterministically.
+- name: Portal backend preference
+  ansible.builtin.template:
+    src: hyprland-portals.conf.j2
+    dest: "/home/{{ nyx_user }}/.config/xdg-desktop-portal/hyprland-portals.conf"
+    owner: "{{ nyx_user }}"
+    group: "{{ nyx_user }}"
+    mode: "0644"
+
+- name: Waybar
+  ansible.builtin.template:
+    src: "waybar/{{ item }}.j2"
+    dest: "/home/{{ nyx_user }}/.config/waybar/{{ item }}"
+    owner: "{{ nyx_user }}"
+    group: "{{ nyx_user }}"
+    mode: "0644"
+  loop:
+    - config.jsonc
+    - style.css
+
+- name: Session desktop entry
+  ansible.builtin.copy:
+    src: hyprland.desktop
+    dest: /usr/share/wayland-sessions/hyprland.desktop
+    mode: "0644"
+
+# --- login ----------------------------------------------------------------
+- name: greetd directory
+  ansible.builtin.file:
+    path: /etc/greetd
+    state: directory
+    mode: "0755"
+
+- name: greetd config
+  ansible.builtin.template:
+    src: greetd.toml.j2
+    dest: /etc/greetd/config.toml
+    mode: "0644"
+  notify: restart greetd
+
+- name: hyprlogin config directory
+  ansible.builtin.file:
+    path: /etc/hyprlogin
+    state: directory
+    mode: "0755"
+  when: nyx_hypr_greeter == 'hyprlogin'
+
+# hyprlogin shares hyprlock's config format, so the greeter and the lock
+# screen are themed from the same palette and look identical.
+- name: hyprlogin greeter config
+  ansible.builtin.template:
+    src: hyprlogin.conf.j2
+    dest: /etc/hyprlogin/hyprlogin.conf
+    mode: "0644"
+  when: nyx_hypr_greeter == 'hyprlogin'
+  notify: restart greetd
+
+- name: Enable greetd
+  ansible.builtin.systemd_service:
+    name: greetd
+    enabled: true
+
+- name: Report VM rendering note
   ansible.builtin.debug:
-    msg: "role 'session_hyprland' not implemented yet (profile: {{ nyx_profile }})"
+    msg: >-
+      VM detected: blur and animations disabled, direct scanout off.
+      Hyprland renders through llvmpipe here.
+  when: nyx_profile.is_vm | bool

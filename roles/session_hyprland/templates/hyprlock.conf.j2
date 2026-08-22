@@ -1,0 +1,43 @@
+# Same format as hyprlogin.conf; keep the two in sync.
+
+general {
+    hide_cursor = true
+    grace = 2
+}
+
+background {
+    monitor =
+{% if nyx_hypr_wallpaper %}
+    path = {{ nyx_hypr_wallpaper }}
+    blur_passes = 3
+    blur_size = 8
+{% else %}
+    color = rgb({{ nyx_palette.base }})
+{% endif %}
+}
+
+input-field {
+    monitor =
+    size = 320, 48
+    outline_thickness = 2
+    dots_center = true
+    outer_color = rgb({{ nyx_palette[nyx_roles.primary] }})
+    inner_color = rgb({{ nyx_palette.surface0 }})
+    font_color = rgb({{ nyx_palette.text }})
+    placeholder_text = <span foreground="##{{ nyx_palette.muted }}">locked</span>
+    check_color = rgb({{ nyx_palette[nyx_roles.secondary] }})
+    fail_color = rgb({{ nyx_palette[nyx_roles.error] }})
+    position = 0, -40
+    halign = center
+    valign = center
+}
+
+label {
+    monitor =
+    text = $TIME
+    color = rgb({{ nyx_palette.text }})
+    font_size = 56
+    position = 0, 120
+    halign = center
+    valign = center
+}

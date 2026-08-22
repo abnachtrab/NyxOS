@@ -63,9 +63,6 @@
                      or 'x86-64-v1' }}"
           virt: "{{ ansible_virtualization_type | default('NA') }}"
           is_vm: "{{ (ansible_virtualization_role | default('host')) == 'guest' }}"
-          chassis: "{{ ansible_form_factor | default('Unknown') }}"
-          is_laptop: "{{ (ansible_form_factor | default('')) in
-                         ['Laptop', 'Notebook', 'Portable', 'Sub Notebook'] }}"
           has_tpm: "{{ nyx_tpm.stat.exists }}"
           secureboot: "{{ (nyx_sbctl.stdout | from_json).secure_boot
                           if nyx_sbctl.rc == 0 else false }}"

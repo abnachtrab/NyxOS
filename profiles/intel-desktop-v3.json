@@ -1,14 +1,14 @@
 {
   "nyx_profile": {
-    "cpu": "amd",
+    "cpu": "intel",
     "gpus": [
-      "nvidia"
+      "intel"
     ],
-    "march": "x86-64-v4",
+    "march": "x86-64-v3",
     "virt": "NA",
     "is_vm": false,
     "has_tpm": true,
     "secureboot": true,
-    "hostname": "nyx-desktop"
+    "hostname": "nyx-intel"
   }
 }

@@ -24,10 +24,8 @@ relying on it.
   `cachyos-mirrorlist`. Section names are Zen-generation-specific and do not
   derive from the x86-64-vN level, so `roles/base` reads them instead of
   generating them. The v3 naming on Intel hardware is still unconfirmed;
-  check on the Surface.
+  check on real hardware.
 - `ansible_virtualization_type` returns `VirtualPC`. Other keys pruned.
-- `ansible_form_factor` returns `Desktop`, so `is_laptop` string matching
-  works and should behave on the Surface.
 - `march` detection returns `x86-64-v4`; host CPU flags pass through.
 - `has_tpm` true with the vTPM enabled.
 
@@ -133,5 +131,21 @@ does not reset an existing password.
 
 - No LUKS in `install.sh` yet — p3 is plain ext4 until Phase 10.
 - `nyx_backup_paths` is a guess; set it to real directories.
-- `session_hyprland`, `gpu_*`, `laptop`, `branding`, `backup_rclone` are
+- `branding` and `backup_rclone` are
   stubs that print the profile and exit 0.
+
+## Scope
+
+Laptop support was removed entirely — no `is_laptop` fact, no `laptop` role,
+no battery/backlight/lid handling. Targets are VMs and desktops only.
+
+Desktop branching that remains:
+
+- **CPU vendor** (`cpu`): intel vs amd, for microcode and pstate.
+- **GPU vendor** (`gpus`): chwd picks the driver; `roles/gpu` adds NVIDIA
+  early-KMS and cmdline, and `conf.d/env.conf` sets VA-API/VDPAU per vendor
+  (nvidia / radeonsi / iHD).
+- **VM** (`is_vm`): guest tooling, software GL, no blur or animations.
+
+Override profiles: `hyperv`, `intel-desktop-v3`, `amd-desktop-v4`,
+`nvidia-desktop-v4`.

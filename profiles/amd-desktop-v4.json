@@ -2,13 +2,13 @@
   "nyx_profile": {
     "cpu": "amd",
     "gpus": [
-      "nvidia"
+      "amd"
     ],
     "march": "x86-64-v4",
     "virt": "NA",
     "is_vm": false,
     "has_tpm": true,
     "secureboot": true,
-    "hostname": "nyx-desktop"
+    "hostname": "nyx-amd"
   }
 }

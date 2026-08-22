@@ -1,0 +1,10 @@
+# Per-host. Override nyx_hypr_monitors in host_vars; the default is
+# Hyprland's autodetect.
+{% for m in nyx_hypr_monitors %}
+monitor = {{ m }}
+{% endfor %}
+{% if nyx_profile.is_vm | bool %}
+
+# Hyper-V has no dynamic resize; resolution is whatever the framebuffer was
+# given at boot. Set it on the kernel cmdline, not here.
+{% endif %}

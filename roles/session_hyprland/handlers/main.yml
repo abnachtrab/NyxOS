@@ -1,0 +1,6 @@
+---
+- name: restart greetd
+  ansible.builtin.systemd_service:
+    name: greetd
+    state: restarted
+  when: not (nyx_profile.is_vm | bool)

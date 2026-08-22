@@ -53,23 +53,29 @@ test that matters.
 
 ---
 
-## Phase 5 — session_hyprland
+## Phase 5 — session_hyprland  *(written, untested on hardware)*
 
-Packages: hyprland, xdg-desktop-portal-hyprland **and** -gtk, hyprpolkitagent,
-hyprlock, hypridle, hyprpaper, waybar, fuzzel, swaync, cliphist, wl-clipboard,
-hyprshot, qt5-wayland, qt6-wayland, pipewire, wireplumber, brightnessctl,
-playerctl.
+`hyprland.conf` sources `conf.d/theme.conf` (owned by roles/theme) plus
+monitors, env, autostart, keybinds, rules. Monitors and env are templated per
+profile; keybinds and rules are static.
 
-Config split under `~/.config/hypr/conf.d/` — monitors and env templated per
-profile, keybinds and rules static. The portal preference file is required; without it screenshare selects the
-wrong backend without reporting an error.
+- **greetd + hyprlogin.** hyprlogin is a hyprlock fork sharing its config
+  format, so login and lock are one theme. tuigreet stays installed as a
+  one-variable fallback; hyprlogin is WIP and AUR-only.
+- **Both portals installed**, with `hyprland-portals.conf` setting the
+  preference explicitly. Without it the backend is chosen by filename sort
+  order and screenshare breaks non-deterministically.
+- **VM branch**: no blur, shadows, or animations; `no_direct_scanout`;
+  software GL. Hyprland's defaults are unusable under llvmpipe.
+- **GPU branch** in `conf.d/env.conf`: nvidia / radeonsi / iHD.
+  `WLR_NO_HARDWARE_CURSORS` deliberately omitted — obsolete since 555.
 
-Ship a fallback session (plain foot, or Plasma) in the display manager. A
-broken Hyprland config on a machine with no other session requires TTY
-recovery.
+Verified: 14 templates render against all 4 profiles, waybar config parses as
+JSON, keybind collision check passes (53 binds, no duplicates).
 
-VM branch: blur and animations off, `misc:no_direct_scanout`, forced
-resolution. Hyprland's default effects perform poorly under llvmpipe.
+Still to do: a dotfiles role with a real `.zshrc` (zsh prompts
+`zsh-newuser-install` on first login), and a wallpaper — `nyx_hypr_wallpaper`
+points at a file that does not exist yet.
 
 ## Phase 6 — gpu
 
@@ -142,5 +148,4 @@ firmware UI, so custom key enrolment can't be exercised there.
 
 ## Phase 11 — metal
 
-Surface first: v3, Intel iGPU, laptop, requires `linux-surface`. Desktop
-after December.
+Desktop after December. No laptop target.

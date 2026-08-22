@@ -1,0 +1,65 @@
+---
+nyx_hypr_packages_core:
+  - hyprland
+  - hyprpolkitagent
+  - hyprlock
+  - hypridle
+  - hyprpaper
+  - hyprcursor
+  # Both portals are required. -hyprland handles screencopy and window
+  # picking; -gtk handles file chooser, settings, and print. Installing only
+  # one silently breaks whichever the other owns.
+  - xdg-desktop-portal
+  - xdg-desktop-portal-hyprland
+  - xdg-desktop-portal-gtk
+
+nyx_hypr_packages_shell:
+  - waybar
+  - fuzzel
+  - swaync
+  - cliphist
+  - wl-clipboard
+  - grim
+  - slurp
+  - wlogout
+
+nyx_hypr_packages_support:
+  - qt5-wayland
+  - qt6-wayland
+  - polkit
+  - pipewire
+  - wireplumber
+  - xdg-user-dirs
+  - playerctl
+  - pamixer
+
+# greetd is the login daemon; the greeter is swappable.
+#   hyprlogin — hyprlock fork, so lock screen and login share one config
+#               format and one theme. AUR (hyprlogin-git), work in progress.
+#   tuigreet  — TTY text greeter. Always installed as the fallback: switching
+#               back is one variable, and it works when the GPU stack does not.
+nyx_hypr_greeter: hyprlogin
+
+nyx_hypr_dm_packages:
+  - greetd
+  - greetd-tuigreet
+
+nyx_hypr_terminal: kitty
+nyx_hypr_filemanager: nautilus
+nyx_hypr_modkey: SUPER
+
+# Per-host monitor lines. Nothing generic is correct here, so the default is
+# Hyprland's own autodetect. Override in host_vars.
+nyx_hypr_monitors:
+  - ",preferred,auto,1"
+
+nyx_hypr_conf_parts:
+  - monitors
+  - env
+  - autostart
+  - keybinds
+  - rules
+
+nyx_hypr_wallpaper: /usr/share/backgrounds/nyxos/wallpaper.png
+nyx_hypr_idle_lock_secs: 300
+nyx_hypr_idle_dpms_secs: 600

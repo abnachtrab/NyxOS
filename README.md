@@ -2,7 +2,7 @@
 
 Ansible-based provisioning for my personal machines. CachyOS base, Hyprland
 session, hardware detection at runtime so one playbook covers a Hyper-V VM,
-an Intel laptop, and an NVIDIA desktop.
+an Intel desktop, an AMD desktop, and an NVIDIA desktop.
 
 The NyxOS palette is pastel accents on a near-black base. It is defined once
 in `roles/theme/defaults/main.yml` and rendered into shell, CSS, Hyprland,
@@ -30,7 +30,6 @@ can be exercised from a VM with no GPU.
 | `gpus` | `lspci -d ::0300 -d ::0302` | NVIDIA-specific KMS/cmdline work (chwd handles driver choice) |
 | `march` | `ld-linux-x86-64.so.2 --help` | CachyOS v3/v4 repo tier |
 | `virt` / `is_vm` | `ansible_virtualization_*` | guest tooling; skips GPU and power roles |
-| `is_laptop` | `ansible_form_factor` | power management, sensors |
 | `has_tpm` | `/sys/class/tpm/tpm0` | LUKS TPM enrolment |
 | `secureboot` | `sbctl status --json` | signing |
 
@@ -63,7 +62,7 @@ point. From the Hyper-V host:
 ```powershell
 .\scripts\run.ps1                 # full run from clean
 .\scripts\run.ps1 -Tags session   # iterate on one role
-.\scripts\run.ps1 -Profile profiles/intel-laptop-v3.json
+.\scripts\run.ps1 -Profile profiles/nvidia-desktop-v4.json
 ```
 
 About 30 seconds to a clean state versus ~15 minutes for a reinstall.
@@ -101,10 +100,9 @@ per-machine and never leave it. `gitleaks` runs as a pre-commit hook.
 - [x] detect
 - [x] base
 - [x] virt_guest
-- [ ] session_hyprland
+- [x] session_hyprland
 - [ ] gpu
 - [ ] theme
-- [ ] laptop
 - [ ] branding
 - [ ] backup_rclone
 - [ ] archiso image

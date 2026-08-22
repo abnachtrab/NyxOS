@@ -52,7 +52,8 @@ nyx_packages_base:
   - unzip
   - 7zip
 
-nyx_packages_aur: []                # keep short; least reproducible layer
+nyx_packages_aur:                   # keep short; least reproducible layer
+  - hyprlogin-git                   # greetd greeter, hyprlock config format
 
 # ---------------------------------------------------------------------------
 # Backup (roles/backup_rclone)
