@@ -59,8 +59,10 @@ nyx_packages_base:
   - unzip
   - 7zip
 
-nyx_packages_aur:                   # keep short; least reproducible layer
-  - hyprlogin-git                   # greetd greeter, hyprlock config format
+# Currently empty. Keep it short if it grows again: this is the least
+# reproducible layer, and one failing build aborts the whole run, which is
+# deliberate.
+nyx_packages_aur: []
 
 # ---------------------------------------------------------------------------
 # Backup (roles/backup_rclone)

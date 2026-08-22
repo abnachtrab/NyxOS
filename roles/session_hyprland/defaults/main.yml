@@ -33,13 +33,7 @@ nyx_hypr_packages_support:
   - playerctl
   - pamixer
 
-# greetd is the login daemon; the greeter is swappable.
-#   hyprlogin — hyprlock fork, so lock screen and login share one config
-#               format and one theme. AUR (hyprlogin-git), work in progress.
-#   tuigreet  — TTY text greeter. Always installed as the fallback: switching
-#               back is one variable, and it works when the GPU stack does not.
-nyx_hypr_greeter: hyprlogin
-
+# greetd is the login daemon, tuigreet the greeter. Both from the repos.
 nyx_hypr_dm_packages:
   - greetd
   - greetd-tuigreet
@@ -61,8 +55,8 @@ nyx_hypr_conf_parts:
   - rules
 
 # Empty renders a solid base colour. Point this at a real file once
-# roles/branding ships one; a missing path makes hyprlock/hyprlogin
-# fail to draw a background rather than falling back.
+# roles/branding ships one; a missing path makes hyprlock fail to draw a
+# background rather than falling back.
 nyx_hypr_wallpaper: ""
 # Visual effects are NOT tied to is_vm. The VM is a design surface: blur and
 # animations must render there or they cannot be tuned. Set false only if

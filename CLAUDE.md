@@ -64,7 +64,7 @@ looks for duplicate keybinds. Two real collisions were caught this way.
 - `curl | bash` makes stdin the script, so `read` eats script text. All
   prompts in `install.sh` read from `/dev/tty`.
 - Hyprland syntax drifts: `togglesplit` is a `layoutmsg`, `windowrulev2` is
-  now `windowrule`, sessions must launch via `start-hyprland`.
+  now `windowrule`.
 - One failing AUR package aborts the whole run. Left fatal deliberately.
 
 ## Known open items
@@ -72,13 +72,15 @@ looks for duplicate keybinds. Two real collisions were caught this way.
 - Hyprland warns `.conf` support is removed in 0.57; the whole config set
   needs porting to the Lua format. **Adam is doing this himself** — do not
   start it unasked.
-- `hyprlogin-git` does not compile against current hyprutils (explicit
-  `operator bool` on `CSharedPointer`). Kept out of `nyx_packages_aur`;
-  `nyx_hypr_greeter: tuigreet` is the working fallback.
+- greetd runs tuigreet, `nyx_packages_aur` is empty, and there is no
+  greeter switch. Both launch paths call `Hyprland` directly, which warns
+  about not being started through a session manager. No run has been
+  observed reaching a session under this config — verify it before trusting
+  the session role.
 - No dotfiles role yet, so zsh prompts `zsh-newuser-install` on first login.
 - `nyx_hypr_wallpaper` is empty on purpose. A path to a nonexistent file
-  makes hyprlock/hyprlogin fail to draw a background rather than falling
-  back, so do not set it until roles/branding ships a real image.
+  makes hyprlock fail to draw a background rather than falling back, so do
+  not set it until roles/branding ships a real image.
 - `nyx_profile.cpu` is detected but unconsumed — no explicit
   `intel-ucode`/`amd-ucode` selection yet.
 

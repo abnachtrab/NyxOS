@@ -44,8 +44,11 @@ def build_env(tdir):
 
 def templates_in(tdir):
     base = os.path.join(ROOT, tdir)
+    # Jinja2's FileSystemLoader only accepts "/" in template names, so the
+    # native separator has to be normalised or every nested template fails
+    # to load when this runs from Windows.
     return sorted(
-        os.path.relpath(p, base)
+        os.path.relpath(p, base).replace(os.sep, "/")
         for p in glob.glob(os.path.join(base, "**", "*.j2"), recursive=True)
     )
 

@@ -28,7 +28,7 @@ can be exercised from a VM with no GPU.
 |---|---|---|
 | `cpu` | `ansible_processor` | microcode |
 | `gpus` | `lspci -d ::0300 -d ::0302` | NVIDIA-specific KMS/cmdline work (chwd handles driver choice) |
-| `march` | `ld-linux-x86-64.so.2 --help` | CachyOS v3/v4 repo tier |
+| `march` | `/proc/cpuinfo` flags | CachyOS v3/v4 repo tier |
 | `virt` / `is_vm` | `ansible_virtualization_*` | software GL, sshd; skips GPU and backup roles |
 | `has_tpm` | `/sys/class/tpm/tpm0` | LUKS TPM enrolment |
 | `secureboot` | `sbctl status --json` | signing |

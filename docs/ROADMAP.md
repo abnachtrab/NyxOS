@@ -59,9 +59,9 @@ test that matters.
 monitors, env, autostart, keybinds, rules. Monitors and env are templated per
 profile; keybinds and rules are static.
 
-- **greetd + hyprlogin.** hyprlogin is a hyprlock fork sharing its config
-  format, so login and lock are one theme. tuigreet stays installed as a
-  one-variable fallback; hyprlogin is WIP and AUR-only.
+- **greetd + tuigreet.** Both from the repos. A graphical greeter is a
+  later problem; nothing in the AUR is currently worth the reproducibility
+  cost, since one failing build aborts the run.
 - **Both portals installed**, with `hyprland-portals.conf` setting the
   preference explicitly. Without it the backend is chosen by filename sort
   order and screenshare breaks non-deterministically.
@@ -71,12 +71,13 @@ profile; keybinds and rules are static.
 - **GPU branch** in `conf.d/env.conf`: nvidia / radeonsi / iHD.
   `WLR_NO_HARDWARE_CURSORS` deliberately omitted — obsolete since 555.
 
-Verified: 15 templates render against all 4 profiles, waybar config parses as
-JSON, keybind collision check passes (53 binds, no duplicates). Boots to
-hyprlogin, authenticates, and starts Hyprland with waybar under llvmpipe.
+Verified: 13 templates render against all 4 profiles, waybar config parses as
+JSON, keybind collision check passes (53 binds, no duplicates). An earlier
+build booted to a greeter, authenticated, and started Hyprland with waybar
+under llvmpipe, but the login path has changed since and needs re-verifying.
 
 Config syntax drift found on that first boot is written up in NOTES.md —
-`togglesplit`, `windowrulev2`, and `start-hyprland`.
+`togglesplit` and `windowrulev2`.
 
 Still to do: a dotfiles role with a real `.zshrc` (zsh prompts
 `zsh-newuser-install` on first login), and a wallpaper — `nyx_hypr_wallpaper`
@@ -96,7 +97,7 @@ hardware.
 
 Palette renders cleanly to shell/CSS/Hyprland/kitty/waybar. Remaining
 consumers are the ones that need a real theme package rather than a colour
-file: SDDM, GTK, Kvantum, rEFInd, Plymouth.
+file: GTK, Kvantum, rEFInd, Plymouth.
 
 ## Phase 7 — branding
 

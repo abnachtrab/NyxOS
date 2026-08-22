@@ -1,14 +1,17 @@
-# Things to verify before trusting them
+# Notes
 
-Written from memory during design. Verify each against upstream before
-relying on it.
+## Unverified — check before relying on these
+
+Written from memory during design, and not confirmed against upstream. The
+sections below this one record things that were actually run.
 
 - **CachyOS signing key ID** for the archiso build host. Take it from the official install
   documentation.
-- **`sbctl status --json` field names** — `setup_mode`, `secure_boot`,
-  `installed` are what `roles/detect` reads. Confirm on the installed version.
-  The failure path is verified: with sbctl absent the task fails soft and
-  `secureboot` falls back to `false`.
+- **`sbctl status --json` field names** — `roles/detect` reads `secure_boot`
+  and nothing else. `setup_mode` and `installed` are unread; Phase 10 needs
+  `setup_mode`, so confirm all three on the installed version. The failure
+  path is verified: with sbctl absent the task fails soft and `secureboot`
+  falls back to `false`.
 - **Hyper-V framebuffer module** — `hyperv_drm` on current kernels,
   `hyperv_fb` on older. The `video=` cmdline param differs.
 - **nvidia-open vs proprietary cutoff.** Turing and newer for open modules;
@@ -42,12 +45,20 @@ relying on it.
 
 - Two user accounts now exist: `adam` (from the CachyOS installer) and
   `abnac` (created by `roles/base` from `nyx_user`). Pick one. `run.ps1`
-  still SSHes as whichever the checkpoint was made with.
+  defaults to `abnac@nyxos-test`, which only works if the checkpoint was
+  made after that account existed.
 - `/etc/sudoers.d/10-installer` was left by the CachyOS installer. Check its
   contents; if it grants passwordless sudo, `roles/base` should remove it.
 - Ansible warns that `/home/<user>/.ansible/tmp` was created 0700. Benign
   when become_user owns it; breaks if the playbook runs as root against a
   different `nyx_user`.
+- **Confirm the session still launches.** Both launch paths call `Hyprland`
+  directly, which logs a warning about not being started through a session
+  manager. No run has been observed reaching a session under the current
+  config, so verify a login on the next clean revert. `uwsm start hyprland`
+  is the warning-free alternative, but uwsm expects environment in its own
+  files rather than the compositor config, so `conf.d/env.conf` — including
+  the `is_vm` software-GL block — would need reworking first.
 
 ## Theme
 
@@ -59,10 +70,11 @@ Adding an application: write a template in `roles/theme/templates/`, add a
 line to `nyx_theme_targets`. Do not put hex values anywhere else.
 
 Primary is haze `#C7B8E8` (pastel purple), secondary is mist `#B4CDE6`
-(pastel purple).
+(pastel blue).
 
-Still unthemed: SDDM/greeter, GTK, Qt (Kvantum), rEFInd, Plymouth, bat, fzf,
-zsh syntax highlighting, btop.
+Still unthemed: the greetd greeter (tuigreet takes a TTY colour scheme, not
+the palette), GTK, Qt (Kvantum), rEFInd, Plymouth, bat, fzf, zsh syntax
+highlighting, btop. `hyprlock.conf` already reads `nyx_palette` directly.
 
 ## Verified by running
 
@@ -141,57 +153,27 @@ no battery/backlight/lid handling. Targets are VMs and desktops only.
 
 Desktop branching that remains:
 
-- **CPU vendor** (`cpu`): intel vs amd, for microcode and pstate.
+- **CPU vendor** (`cpu`): detected but consumed by nothing yet. Intended for
+  `intel-ucode` / `amd-ucode` selection and pstate; neither is implemented,
+  so no role branches on it today.
 - **GPU vendor** (`gpus`): chwd picks the driver; `roles/gpu` adds NVIDIA
   early-KMS and cmdline, and `conf.d/env.conf` sets VA-API/VDPAU per vendor
   (nvidia / radeonsi / iHD).
-- **VM** (`is_vm`): guest tooling, software GL, no blur or animations.
+- **VM** (`is_vm`): software GL and sshd, and skipping `roles/gpu` and
+  `roles/backup_rclone`. Nothing cosmetic — see "The VM is a design surface"
+  below.
 
 Override profiles: `hyperv`, `intel-desktop-v3`, `amd-desktop-v4`,
 `nvidia-desktop-v4`.
 
-## hyprlogin: verified paths and known breakage
-
-`pacman -Ql hyprlogin-git` confirms:
-
-- `/usr/bin/hyprlogin`, `/usr/bin/start-hyprland`
-- `/etc/hyprlogin/hyprlogin.conf` — greeter appearance, hyprlock format
-- `/usr/share/hyprlogin/hyprland-greeter.conf` — the compositor config the
-  greeter runs inside
-- `/usr/share/hyprlogin/greetd-config.toml` — reference greetd config; our
-  template matches it apart from comments
-
-Both `/etc/hyprlogin/hyprlogin.conf` and
-`/usr/share/hyprlogin/hyprland-greeter.conf` are package-owned, so a
-hyprlogin update overwrites them and the role must be re-run.
-
-**hyprlogin-git does not compile against current hyprutils.**
-
-    Seat.cpp:172:12: error: cannot convert
-    'Hyprutils::Memory::CSharedPointer<CCWlSeat>' to 'bool' in return
-
-`CSharedPointer::operator bool()` is explicit upstream; hyprlogin returns the
-pointer directly from a bool function. Local fix for testing:
-
-    cd ~/.cache/yay/hyprlogin-git
-    sed -i 's/return m_pSeat;/return m_pSeat != nullptr;/' \
-      src/hyprlogin-src/src/core/Seat.cpp
-    makepkg -ei          # -e is required; makepkg wipes $srcdir otherwise
-
-This is local only. A from-scratch install hits the same error, so
-`hyprlogin-git` should stay out of `nyx_packages_aur` until upstream fixes
-it, and `nyx_hypr_greeter: tuigreet` is the working fallback.
-
-One failing AUR package aborts the whole playbook run. That is the
-reproducibility cost of the AUR, and it is left fatal deliberately — a silent
-AUR failure is worse than a loud one.
-
 ## Wallpaper
 
-`nyx_hypr_wallpaper` defaults to empty, which makes hyprlock, hyprlogin, and
-hyprpaper use a solid `base` colour. A path pointing at a file that does not
-exist makes the hyprlock-family greeters fail to draw a background rather
-than falling back, so do not set it until roles/branding ships a real image.
+`nyx_hypr_wallpaper` defaults to empty. `hyprlock.conf` then renders
+`color = rgb(<base>)`; `hyprpaper.conf` renders no `preload`/`wallpaper`
+pair at all, leaving the compositor's own background. A path pointing at a
+file that does not exist makes hyprlock fail to draw a background rather
+than falling back, so do not set it until roles/branding ships a real
+image.
 
 ## Hyprland syntax drift (found on first boot)
 
@@ -201,9 +183,9 @@ Four config errors on the first real session, all fixed:
   `bind = $mod, S, layoutmsg, togglesplit`.
 - `windowrulev2` was merged back into `windowrule` and now warns as
   deprecated. Same argument syntax.
-- The session must launch via `start-hyprland`, not the bare `Hyprland`
-  binary — Hyprland warns loudly otherwise. Fixed in
-  `files/hyprland.desktop` and in the tuigreet `--cmd`.
+- Hyprland warns when started as a bare binary rather than through a
+  session manager. Both launch paths accept the warning for now; the
+  alternative is uwsm, which changes where environment is set.
 - Hyprland warns that `.conf` support is removed in 0.57. Not addressed;
   the whole config set will need porting before that release.
 
