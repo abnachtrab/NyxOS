@@ -19,8 +19,8 @@ nyx_palette:
   disabled:  "575C7E"
 
   # accents
-  mist:      "B4CDE6"   # primary — pastel blue
-  haze:      "C7B8E8"   # secondary — pastel purple
+  haze:      "C7B8E8"   # primary — pastel purple
+  mist:      "B4CDE6"   # secondary — pastel blue
   blush:     "F0B8CC"
   verdigris: "A8D8CC"
   sage:      "9FD8B4"
@@ -31,8 +31,8 @@ nyx_palette:
 # Semantic roles. Applications consume these names, not the raw colors, so
 # reassigning a role is a one-line change.
 nyx_roles:
-  primary:   mist
-  secondary: haze
+  primary:   haze
+  secondary: mist
   info:      mist
   success:   sage
   warning:   sun

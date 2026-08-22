@@ -60,11 +60,24 @@ names, so reassigning a role is one line.
 Adding an application: write a template in `roles/theme/templates/`, add a
 line to `nyx_theme_targets`. Do not put hex values anywhere else.
 
-Primary is mist `#B4CDE6` (pastel blue), secondary is haze `#C7B8E8`
+Primary is haze `#C7B8E8` (pastel purple), secondary is mist `#B4CDE6`
 (pastel purple).
 
 Still unthemed: SDDM/greeter, GTK, Qt (Kvantum), rEFInd, Plymouth, bat, fzf,
 zsh syntax highlighting, btop.
+
+## Verified by running
+
+- `roles/detect` and `roles/theme` run clean; theme is idempotent on the
+  second pass (changed=0).
+- Rendered `colors.sh` sources into a shell with the expected role values.
+- `-e @profiles/...` correctly reports OVERRIDE and skips detection.
+
+Bug found and fixed: microarch detection originally shelled out to
+`/lib/ld-linux-x86-64.so.2`. That path only exists where /lib is a symlink to
+/usr/lib (Arch does this, Debian/Ubuntu do not), and the task failed soft —
+reporting x86-64-v1 on a v4 machine. It now derives the level from
+/proc/cpuinfo flags, which has no path dependency.
 
 ## Known gaps
 

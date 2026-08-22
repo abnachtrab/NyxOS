@@ -9,7 +9,7 @@ nyx_user_groups: [wheel, video, audio, input, storage]
 nyx_url:         "https://github.com/abnachtrab/NyxOS"
 # Palette lives in roles/theme/defaults/main.yml. Nothing else
 # hardcodes a hex value.
-nyx_accent:      "#B4CDE6"          # mist, primary
+nyx_accent:      "#C7B8E8"          # haze, primary
 
 # ---------------------------------------------------------------------------
 # Kernel / packages / shell
