@@ -53,7 +53,7 @@ test that matters.
 
 ---
 
-## Phase 5 — session_hyprland  *(written, untested on hardware)*
+## Phase 5 — session_hyprland  *(booting in Hyper-V)*
 
 `hyprland.conf` sources `conf.d/theme.conf` (owned by roles/theme) plus
 monitors, env, autostart, keybinds, rules. Monitors and env are templated per
@@ -70,8 +70,12 @@ profile; keybinds and rules are static.
 - **GPU branch** in `conf.d/env.conf`: nvidia / radeonsi / iHD.
   `WLR_NO_HARDWARE_CURSORS` deliberately omitted — obsolete since 555.
 
-Verified: 14 templates render against all 4 profiles, waybar config parses as
-JSON, keybind collision check passes (53 binds, no duplicates).
+Verified: 15 templates render against all 4 profiles, waybar config parses as
+JSON, keybind collision check passes (53 binds, no duplicates). Boots to
+hyprlogin, authenticates, and starts Hyprland with waybar under llvmpipe.
+
+Config syntax drift found on that first boot is written up in NOTES.md —
+`togglesplit`, `windowrulev2`, and `start-hyprland`.
 
 Still to do: a dotfiles role with a real `.zshrc` (zsh prompts
 `zsh-newuser-install` on first login), and a wallpaper — `nyx_hypr_wallpaper`

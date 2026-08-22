@@ -192,3 +192,20 @@ AUR failure is worse than a loud one.
 hyprpaper use a solid `base` colour. A path pointing at a file that does not
 exist makes the hyprlock-family greeters fail to draw a background rather
 than falling back, so do not set it until roles/branding ships a real image.
+
+## Hyprland syntax drift (found on first boot)
+
+Four config errors on the first real session, all fixed:
+
+- `togglesplit` is a dwindle **layout message**, not a top-level dispatcher.
+  `bind = $mod, S, layoutmsg, togglesplit`.
+- `windowrulev2` was merged back into `windowrule` and now warns as
+  deprecated. Same argument syntax.
+- The session must launch via `start-hyprland`, not the bare `Hyprland`
+  binary — Hyprland warns loudly otherwise. Fixed in
+  `files/hyprland.desktop` and in the tuigreet `--cmd`.
+- Hyprland warns that `.conf` support is removed in 0.57. Not addressed;
+  the whole config set will need porting before that release.
+
+`hyprctl configerrors` lists parse failures in a running session and is the
+fastest way to catch these.
