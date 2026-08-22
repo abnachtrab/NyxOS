@@ -8,7 +8,7 @@
 param(
   [string]$VMName     = "NyxOS-Test",
   [string]$Checkpoint = "base-install",
-  [string]$SshTarget  = "nyx@nyxos-test",
+  [string]$SshTarget  = "abnac@nyxos-test",
   [string]$Tags       = "",
   [string]$Profile    = ""
 )
@@ -32,7 +32,7 @@ $args = @()
 if ($Tags)    { $args += "--tags $Tags" }
 if ($Profile) { $args += "-e @$Profile" }
 
-$cmd = "cd ~/nyxos-installer && git pull --ff-only && " +
+$cmd = "cd ~/NyxOS && git pull --ff-only && " +
        "ansible-playbook site.yml $($args -join ' ') --ask-become-pass"
 
 Write-Host "==> $cmd" -ForegroundColor Cyan

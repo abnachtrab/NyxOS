@@ -1,8 +1,8 @@
 ---
-# Cirra palette. Single source of truth for every themed surface.
+# NyxOS palette. Single source of truth for every themed surface.
 # roles/theme renders this into per-application formats; nothing else should
 # hardcode a hex value.
-cirra_palette:
+nyx_palette:
   # surfaces, darkest to lightest
   crust:     "101119"
   mantle:    "161722"
@@ -19,8 +19,8 @@ cirra_palette:
   disabled:  "575C7E"
 
   # accents
-  haze:      "C7B8E8"   # primary
-  cirrus:    "B4CDE6"   # secondary
+  mist:      "B4CDE6"   # primary — pastel blue
+  haze:      "C7B8E8"   # secondary — pastel purple
   blush:     "F0B8CC"
   verdigris: "A8D8CC"
   sage:      "9FD8B4"
@@ -30,10 +30,10 @@ cirra_palette:
 
 # Semantic roles. Applications consume these names, not the raw colors, so
 # reassigning a role is a one-line change.
-cirra_roles:
-  primary:   haze
-  secondary: cirrus
-  info:      cirrus
+nyx_roles:
+  primary:   mist
+  secondary: haze
+  info:      mist
   success:   sage
   warning:   sun
   error:     rose
@@ -46,9 +46,9 @@ cirra_roles:
   fg_dim:    subtext
   fg_muted:  muted
 
-cirra_theme_targets:
-  - { src: "colors-sh.j2",       dest: "~/.config/cirra/colors.sh" }
-  - { src: "colors-css.j2",      dest: "~/.config/cirra/colors.css" }
+nyx_theme_targets:
+  - { src: "colors-sh.j2",       dest: "~/.config/nyxos/colors.sh" }
+  - { src: "colors-css.j2",      dest: "~/.config/nyxos/colors.css" }
   - { src: "colors-hypr.j2",     dest: "~/.config/hypr/conf.d/theme.conf" }
   - { src: "colors-kitty.j2",    dest: "~/.config/kitty/theme.conf" }
   - { src: "colors-waybar.j2",   dest: "~/.config/waybar/theme.css" }

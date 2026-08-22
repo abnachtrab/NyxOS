@@ -1,10 +1,10 @@
-# CirraOS
+# NyxOS
 
 Ansible-based provisioning for my personal machines. CachyOS base, Hyprland
 session, hardware detection at runtime so one playbook covers a Hyper-V VM,
 an Intel laptop, and an NVIDIA desktop.
 
-The Cirra palette is pastel accents on a near-black base. It is defined once
+The NyxOS palette is pastel accents on a near-black base. It is defined once
 in `roles/theme/defaults/main.yml` and rendered into shell, CSS, Hyprland,
 kitty, and waybar formats; no other file contains a hex value.
 
@@ -46,7 +46,7 @@ roles/detect/         facts only, never mutates
 roles/base/           repos, packages, user, AUR helper, sshd
 roles/virt_guest/     per-hypervisor guest tooling
 roles/gpu/            chwd autoconfigure + KMS/cmdline integration
-roles/theme/          Cirra palette rendered into per-app formats
+roles/theme/          NyxOS palette rendered into per-app formats
 roles/session_hyprland/
 roles/branding/       os-release et al
 roles/backup_rclone/  OneDrive sync via systemd timer
@@ -70,12 +70,20 @@ About 30 seconds to a clean state versus ~15 minutes for a reinstall.
 
 ## Install
 
+`install.sh` replaces Calamares, not the live ISO. Boot the stock CachyOS
+ISO as normal, open a terminal, and run:
+
 ```bash
-NYX_DISK=/dev/nvme0n1 ./scripts/install.sh
+curl -sL https://raw.githubusercontent.com/abnachtrab/NyxOS/main/scripts/install.sh \
+  | NYX_DISK=/dev/nvme0n1 NYX_FORCE=1 bash
 ```
 
-Destructive. No default disk, and gated behind `nyxos.auto=1` on the kernel
-cmdline so recovery media cannot wipe a machine by accident.
+It partitions, pacstraps, chroots, and runs the playbook. No user is created
+by the installer; `roles/base` creates `nyx_user` and nothing else.
+
+Destructive. `NYX_DISK` has no default, and the script refuses to run
+unless `nyxos.auto=1` is on the kernel cmdline or `NYX_FORCE=1` is set, so
+booting recovery media cannot wipe a machine by accident.
 
 ## Secrets
 

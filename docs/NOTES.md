@@ -58,9 +58,10 @@ Applications consume role names (primary, success, panel) rather than colour
 names, so reassigning a role is one line.
 
 Adding an application: write a template in `roles/theme/templates/`, add a
-line to `cirra_theme_targets`. Do not put hex values anywhere else.
+line to `nyx_theme_targets`. Do not put hex values anywhere else.
 
-Primary is haze `#C7B8E8` (pastel purple), secondary is cirrus `#B4CDE6`.
+Primary is mist `#B4CDE6` (pastel blue), secondary is haze `#C7B8E8`
+(pastel purple).
 
 Still unthemed: SDDM/greeter, GTK, Qt (Kvantum), rEFInd, Plymouth, bat, fzf,
 zsh syntax highlighting, btop.

@@ -1,6 +1,6 @@
 ---
-# Renders cirra_palette into every consumer format. Adding an application
-# means adding a template plus a line in cirra_theme_targets, not editing
+# Renders nyx_palette into every consumer format. Adding an application
+# means adding a template plus a line in nyx_theme_targets, not editing
 # colors in a second place.
 
 - name: Theme directories
@@ -11,7 +11,7 @@
     group: "{{ nyx_user }}"
     mode: "0755"
   loop:
-    - "/home/{{ nyx_user }}/.config/cirra"
+    - "/home/{{ nyx_user }}/.config/nyxos"
     - "/home/{{ nyx_user }}/.config/hypr/conf.d"
     - "/home/{{ nyx_user }}/.config/kitty"
     - "/home/{{ nyx_user }}/.config/waybar"
@@ -23,6 +23,6 @@
     owner: "{{ nyx_user }}"
     group: "{{ nyx_user }}"
     mode: "0644"
-  loop: "{{ cirra_theme_targets }}"
+  loop: "{{ nyx_theme_targets }}"
   loop_control:
     label: "{{ item.dest }}"
