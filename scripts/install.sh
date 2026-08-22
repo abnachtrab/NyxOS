@@ -69,6 +69,13 @@ partprobe "$DISK"
 
 if [[ "$DISK" =~ (nvme|mmcblk|loop) ]]; then P="${DISK}p"; else P="$DISK"; fi
 
+# sgdisk -Z zaps the partition table, not the filesystem superblocks inside
+# the ranges it re-creates. On a re-install those survive at the same offsets,
+# and an untyped mount probes the stale one: mkfs.btrfs succeeds, then
+# `mount /dev/sda3 /mnt` reads the old ext4 super and reports the new
+# filesystem as corrupt. Clear each partition before laying anything down.
+wipefs -a "${P}1" "${P}2" "${P}3"
+
 mkfs.fat -F32 -n ESP      "${P}1"
 mkfs.ext4 -F -L recovery  "${P}2"   # rescue volume; kept simple on purpose
 mkfs.btrfs -f -L nyxroot  "${P}3"   # LUKS goes under this in Phase 10
@@ -77,7 +84,7 @@ mkfs.btrfs -f -L nyxroot  "${P}3"   # LUKS goes under this in Phase 10
 # stock CachyOS install have the same shape and snapshot tooling written for
 # one works on the other. @cache, @tmp and @log are separate so a root
 # snapshot does not carry package caches or logs.
-mount "${P}3" /mnt
+mount -t btrfs "${P}3" /mnt
 for sv in @ @home @root @srv @cache @tmp @log; do
   btrfs subvolume create "/mnt/${sv}"
 done
@@ -87,15 +94,15 @@ umount /mnt
 # for every read.
 BTRFS_OPTS="noatime,compress=zstd:3"
 
-mount -o "subvol=@,${BTRFS_OPTS}" "${P}3" /mnt
+mount -t btrfs -o "subvol=@,${BTRFS_OPTS}" "${P}3" /mnt
 mkdir -p /mnt/home /mnt/root /mnt/srv /mnt/var/cache /mnt/var/tmp /mnt/var/log /mnt/boot
-mount -o "subvol=@home,${BTRFS_OPTS}"  "${P}3" /mnt/home
-mount -o "subvol=@root,${BTRFS_OPTS}"  "${P}3" /mnt/root
-mount -o "subvol=@srv,${BTRFS_OPTS}"   "${P}3" /mnt/srv
-mount -o "subvol=@cache,${BTRFS_OPTS}" "${P}3" /mnt/var/cache
-mount -o "subvol=@tmp,${BTRFS_OPTS}"   "${P}3" /mnt/var/tmp
-mount -o "subvol=@log,${BTRFS_OPTS}"   "${P}3" /mnt/var/log
-mount "${P}1" /mnt/boot
+mount -t btrfs -o "subvol=@home,${BTRFS_OPTS}"  "${P}3" /mnt/home
+mount -t btrfs -o "subvol=@root,${BTRFS_OPTS}"  "${P}3" /mnt/root
+mount -t btrfs -o "subvol=@srv,${BTRFS_OPTS}"   "${P}3" /mnt/srv
+mount -t btrfs -o "subvol=@cache,${BTRFS_OPTS}" "${P}3" /mnt/var/cache
+mount -t btrfs -o "subvol=@tmp,${BTRFS_OPTS}"   "${P}3" /mnt/var/tmp
+mount -t btrfs -o "subvol=@log,${BTRFS_OPTS}"   "${P}3" /mnt/var/log
+mount -t vfat "${P}1" /mnt/boot
 
 # --- initialize_pacman ----------------------------------------------------
 # Calamares ranks mirrors and builds the keyring on the live system, then

@@ -249,3 +249,21 @@ Unverified: whether a single-device btrfs root needs anything in
 `mkinitcpio.conf`. The `filesystems` hook should pull the module in via
 autodetect, and the `btrfs` hook is for multi-device arrays, but this has
 not been booted yet.
+
+## Stale superblocks survive sgdisk -Z
+
+Found on the first btrfs install. `mkfs.btrfs` reported success — label,
+UUID, profiles all normal — and the very next `mount /dev/sda3 /mnt` failed
+with "cannot mount; probably corrupted filesystem".
+
+The filesystem was fine. `mount -t btrfs /dev/sda3 /mnt` worked immediately.
+`sgdisk -Z` zaps the partition table but not the filesystem superblocks
+inside the ranges it then re-creates, so on a re-install the previous ext4
+super was still sitting at its old offset. An untyped `mount` probes with
+libblkid, found the stale ext4 signature first, and tried to mount the new
+btrfs as ext4.
+
+Only reproduces on a re-install, which is exactly the path the dev loop
+takes. Two fixes, both applied: `wipefs -a` on each partition after
+partprobe and before mkfs, and an explicit `-t` on every mount in the
+script. Never let mount guess on a disk this script has already written.
