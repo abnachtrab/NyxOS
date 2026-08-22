@@ -267,3 +267,29 @@ Only reproduces on a re-install, which is exactly the path the dev loop
 takes. Two fixes, both applied: `wipefs -a` on each partition after
 partprobe and before mkfs, and an explicit `-t` on every mount in the
 script. Never let mount guess on a disk this script has already written.
+
+## Mount state around install.sh
+
+Same class of problem, handled in three places.
+
+Before anything is prompted for, the script refuses outright if any
+partition of `$DISK` is mounted at `/`, `/run/archiso/*`, or
+`/run/initramfs/*` — that is the running system or the live medium, and the
+only way to reach it is a wrong `NYX_DISK`. The check is read-only and
+unmounts nothing.
+
+After the ERASE confirmation and before the first write, it releases the
+device: unmounts any existing `/mnt` tree, unmounts everything else backed
+by `$DISK`, and swapoffs any swap on it. A mounted partition cannot be
+repartitioned cleanly — mkfs refuses, or partprobe declines to re-read the
+table and the kernel keeps the old geometry — and both failures surface much
+later looking unrelated.
+
+At the end it unmounts `/mnt` itself rather than telling the caller to. The
+tree is seven subvolumes deep, and leaving it mounted is what the next run
+trips over. If the unmount fails it reports `fuser -vm /mnt` and says the
+install completed anyway.
+
+Sources are matched by prefix against `findmnt -rno TARGET,SOURCE`, which
+prints btrfs sources as `/dev/sda3[/@home]` — the prefix test handles that,
+an equality test would not.

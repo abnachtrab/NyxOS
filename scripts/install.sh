@@ -30,6 +30,24 @@ if [[ "${NYX_FORCE:-0}" != "1" ]] && ! grep -q 'nyxos.auto=1' /proc/cmdline; the
   exit 1
 fi
 
+# Every mountpoint currently backed by a partition of $DISK.
+disk_mounts() {
+  findmnt -rno TARGET,SOURCE | awk -v d="$DISK" 'index($2, d) == 1 { print $1 }'
+}
+
+# Refuse before prompting for anything if the target is carrying the running
+# system or the live medium. Checked read-only; nothing is unmounted here.
+for mp in $(disk_mounts); do
+  case "$mp" in
+    / | /run/archiso/* | /run/initramfs/* )
+      echo "refusing to touch ${DISK}: it is mounted at ${mp} and in use by"
+      echo "the running system. Boot the ISO from other media, or set"
+      echo "NYX_DISK to the disk you actually mean to install to."
+      exit 1
+      ;;
+  esac
+done
+
 # When the script is piped (curl | bash) stdin is the script itself, so read
 # would consume script text instead of keystrokes. Take input from the
 # terminal explicitly.
@@ -58,6 +76,28 @@ while :; do
 done
 PW_HASH="$(printf '%s' "$pw1" | openssl passwd -6 -stdin)"
 unset pw1 pw2
+
+# --- release the device ---------------------------------------------------
+# A partition that is still mounted or in use as swap cannot be repartitioned
+# cleanly: mkfs refuses, or partprobe declines to re-read the table and the
+# kernel keeps the old geometry. Either way the failure surfaces much later
+# as something that looks unrelated. A previous run of this script is the
+# usual source.
+if findmnt -rno TARGET /mnt >/dev/null 2>&1; then
+  echo "unmounting existing /mnt tree"
+  umount -R /mnt
+fi
+
+for mp in $(disk_mounts | sort -r); do
+  echo "unmounting ${mp} (backed by ${DISK})"
+  umount -R "$mp"
+done
+
+while read -r sdev _; do
+  case "$sdev" in
+    "$DISK"*) echo "swapoff ${sdev}"; swapoff "$sdev" ;;
+  esac
+done < <(tail -n +2 /proc/swaps)
 
 # --- partition ------------------------------------------------------------
 wipefs -a "$DISK"
@@ -204,7 +244,15 @@ arch-chroot /mnt /bin/bash -euo pipefail -c '
 # removes it without claiming the data is unrecoverable.
 rm -f /mnt/root/.nyx-vars.yml
 
+# Unmount here rather than leaving it to the caller: the tree is nested seven
+# subvolumes deep, and leaving it mounted is what a re-run then trips over.
+if ! umount -R /mnt; then
+  echo "warning: /mnt did not unmount cleanly. Something still holds it:"
+  fuser -vm /mnt || true
+  echo "The install is complete; unmount before rebooting."
+fi
+
 # Root stays locked (no password), matching Ubuntu/Fedora defaults. That
 # makes systemd's emergency shell unusable, so recovery depends on the
 # recovery partition or external media rather than single-user mode.
-echo "done. umount -R /mnt && reboot"
+echo "done. reboot when ready."
