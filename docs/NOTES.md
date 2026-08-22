@@ -79,6 +79,30 @@ Bug found and fixed: microarch detection originally shelled out to
 reporting x86-64-v1 on a v4 machine. It now derives the level from
 /proc/cpuinfo flags, which has no path dependency.
 
+## Bugs found on the first real install
+
+**refind_linux.conf built from the wrong cmdline.** `refind-install` runs
+`mkrlconf`, which reads `/proc/cmdline`. `arch-chroot` bind-mounts the host's
+`/proc` rather than creating a namespace, so inside the chroot that is the
+live ISO's cmdline — `archisobasedir=arch archisosearchuuid=... cow_spacesize=10G`
+with no `root=`. Result: the initramfs cannot switch root, and the machine
+drops to an emergency shell on first boot. Fixed by writing
+`refind_linux.conf` from `install.sh` after the chroot block, using
+`blkid -s UUID -o value` on the real root partition.
+
+Anything else that reads `/proc` or `/sys` inside `arch-chroot` has the same
+exposure. `lspci` and DMI are fine (they describe hardware, which is shared);
+`/proc/cmdline` and the UTS hostname are not.
+
+**Hostname read from the live environment.** Same root cause —
+`ansible_hostname` reflects the running UTS namespace. `roles/detect` now
+reads `/etc/hostname` and falls back to the fact.
+
+**Root is deliberately locked**, matching Ubuntu/Fedora. That makes systemd's
+emergency shell unusable ("Cannot open access to console, the root account is
+locked"), so recovery depends on the recovery partition or external media.
+Worth pulling the recovery partition earlier than Phase 10 for this reason.
+
 ## Known gaps
 
 - No LUKS in `install.sh` yet — p3 is plain ext4 until Phase 10.

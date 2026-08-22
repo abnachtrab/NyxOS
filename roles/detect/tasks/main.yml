@@ -69,7 +69,11 @@
           has_tpm: "{{ nyx_tpm.stat.exists }}"
           secureboot: "{{ (nyx_sbctl.stdout | from_json).secure_boot
                           if nyx_sbctl.rc == 0 else false }}"
-          hostname: "{{ ansible_hostname }}"
+          # ansible_hostname reads the running UTS namespace. Under
+          # arch-chroot that is the live ISO's name, not the target's,
+          # so read the file the installer actually wrote.
+          hostname: "{{ lookup('file', '/etc/hostname', errors='ignore')
+                        | default(ansible_hostname, true) | trim }}"
 
 - name: Show profile
   ansible.builtin.debug:

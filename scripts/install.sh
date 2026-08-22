@@ -21,6 +21,7 @@ RECOVERY_GB="${NYX_RECOVERY_GB:-8}"
 TZ="${NYX_TZ:-America/Phoenix}"
 LOCALE="${NYX_LOCALE:-en_US.UTF-8}"
 KEYMAP="${NYX_KEYMAP:-us}"
+CMDLINE="${NYX_CMDLINE:-quiet nowatchdog}"
 
 if [[ "${NYX_FORCE:-0}" != "1" ]] && ! grep -q 'nyxos.auto=1' /proc/cmdline; then
   echo "refusing to format ${DISK}: add nyxos.auto=1 to the kernel cmdline"
@@ -112,10 +113,22 @@ chwd -a || true
 mkinitcpio -P
 systemctl enable NetworkManager fstrim.timer
 
-# refind-install rewrites refind.conf on package upgrade, so NyxOS settings
-# belong in a separate file pulled in with include.
 refind-install
 CHROOT
+
+# --- bootloader cmdline ---------------------------------------------------
+# refind-install's mkrlconf builds refind_linux.conf from /proc/cmdline.
+# arch-chroot does not create a new UTS/proc namespace, so inside the chroot
+# that is the LIVE ISO's cmdline (archisobasedir=..., no root=), which
+# produces entries that drop to an initramfs emergency shell on first boot.
+# Write it here instead, where the real root UUID is known.
+ROOT_UUID="$(blkid -s UUID -o value "${P}3")"
+cat > /mnt/boot/refind_linux.conf <<EOF
+"Boot with standard options"  "root=UUID=${ROOT_UUID} rw ${CMDLINE}"
+"Boot to single-user mode"    "root=UUID=${ROOT_UUID} rw single"
+"Boot with minimal options"   "root=UUID=${ROOT_UUID} rw"
+EOF
+echo "refind_linux.conf written for root=UUID=${ROOT_UUID}"
 
 # --- provision ------------------------------------------------------------
 git clone "$REPO" /mnt/root/NyxOS
@@ -125,4 +138,7 @@ arch-chroot /mnt /bin/bash -euo pipefail -c '
   ansible-playbook site.yml -c local -i localhost,
 '
 
+# Root stays locked (no password), matching Ubuntu/Fedora defaults. That
+# makes systemd's emergency shell unusable, so recovery depends on the
+# recovery partition or external media rather than single-user mode.
 echo "done. umount -R /mnt && reboot"
