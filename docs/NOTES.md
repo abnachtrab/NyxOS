@@ -128,10 +128,15 @@ before it formats a disk.
 `install.sh` prompts before partitioning, hashes with `openssl passwd -6`
 immediately, and writes the hash to `/root/.nyx-vars.yml` (0600) in the
 target. The playbook is invoked with `-e @/root/.nyx-vars.yml`, which makes
-Ansible skip its own `vars_prompt` — verified. The file is shredded after.
+Ansible skip its own `vars_prompt` — verified. The file is removed after.
 
 Plaintext never leaves the installer's shell, and the hash is passed by file
 rather than on a command line where `ps` would expose it.
+
+It is removed rather than shredded. `shred` guarantees nothing on btrfs:
+copy-on-write puts the overwrite in new extents and leaves the original
+blocks until they are reclaimed. What is written is a hash, not a password,
+so this is a downgrade in a claim rather than in exposure.
 
 The playbook's `vars_prompt` remains as the fallback for running
 `ansible-playbook` by hand on an installed system.
@@ -141,7 +146,7 @@ does not reset an existing password.
 
 ## Known gaps
 
-- No LUKS in `install.sh` yet — p3 is plain ext4 until Phase 10.
+- No LUKS in `install.sh` yet — p3 is bare btrfs until Phase 10.
 - `nyx_backup_paths` is a guess; set it to real directories.
 - `branding` and `backup_rclone` are
   stubs that print the profile and exit 0.
@@ -220,3 +225,27 @@ agent. `is_vm` now gates exactly three things:
 - skipping `roles/gpu` and `roles/backup_rclone`
 
 `nyx_profile.virt` is still detected and reported. Nothing consumes it.
+
+## Filesystem
+
+p3 is btrfs with CachyOS's Calamares subvolume layout — `@`, `@home`,
+`@root`, `@srv`, `@cache`, `@tmp`, `@log` — mounted `noatime,compress=zstd:3`.
+Matching upstream means snapshot tooling written for CachyOS applies here
+unchanged, and the test VM and a shipped install have the same shape.
+
+`@cache`, `@tmp`, and `@log` are separate subvolumes so a root snapshot does
+not drag package caches and journals along with it.
+
+Two consequences already handled:
+
+- The kernel cmdline needs `rootflags=subvol=@`. Without it the top-level
+  subvolume is mounted, there is no `/sbin/init` there, and the boot fails
+  in a way that looks like a missing root.
+- `shred` is meaningless on COW; the password-hash file is removed instead.
+
+p1 is FAT32 (ESP) and p2 stays ext4 — a rescue volume is worth keeping dull.
+
+Unverified: whether a single-device btrfs root needs anything in
+`mkinitcpio.conf`. The `filesystems` hook should pull the module in via
+autodetect, and the `btrfs` hook is for multi-device arrays, but this has
+not been booted yet.

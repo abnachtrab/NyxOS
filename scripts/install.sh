@@ -69,12 +69,33 @@ partprobe "$DISK"
 
 if [[ "$DISK" =~ (nvme|mmcblk|loop) ]]; then P="${DISK}p"; else P="$DISK"; fi
 
-mkfs.fat -F32 -n ESP       "${P}1"
-mkfs.ext4 -F  -L recovery  "${P}2"
-mkfs.ext4 -F  -L nyxroot "${P}3"    # LUKS lands here in Phase 10
+mkfs.fat -F32 -n ESP      "${P}1"
+mkfs.ext4 -F -L recovery  "${P}2"   # rescue volume; kept simple on purpose
+mkfs.btrfs -f -L nyxroot  "${P}3"   # LUKS goes under this in Phase 10
 
+# Subvolume layout copied from CachyOS's Calamares, so a NyxOS install and a
+# stock CachyOS install have the same shape and snapshot tooling written for
+# one works on the other. @cache, @tmp and @log are separate so a root
+# snapshot does not carry package caches or logs.
 mount "${P}3" /mnt
-mount --mkdir "${P}1" /mnt/boot
+for sv in @ @home @root @srv @cache @tmp @log; do
+  btrfs subvolume create "/mnt/${sv}"
+done
+umount /mnt
+
+# zstd:3 is the CachyOS default. noatime because atime on COW means a write
+# for every read.
+BTRFS_OPTS="noatime,compress=zstd:3"
+
+mount -o "subvol=@,${BTRFS_OPTS}" "${P}3" /mnt
+mkdir -p /mnt/home /mnt/root /mnt/srv /mnt/var/cache /mnt/var/tmp /mnt/var/log /mnt/boot
+mount -o "subvol=@home,${BTRFS_OPTS}"  "${P}3" /mnt/home
+mount -o "subvol=@root,${BTRFS_OPTS}"  "${P}3" /mnt/root
+mount -o "subvol=@srv,${BTRFS_OPTS}"   "${P}3" /mnt/srv
+mount -o "subvol=@cache,${BTRFS_OPTS}" "${P}3" /mnt/var/cache
+mount -o "subvol=@tmp,${BTRFS_OPTS}"   "${P}3" /mnt/var/tmp
+mount -o "subvol=@log,${BTRFS_OPTS}"   "${P}3" /mnt/var/log
+mount "${P}1" /mnt/boot
 
 # --- initialize_pacman ----------------------------------------------------
 # Calamares ranks mirrors and builds the keyring on the live system, then
@@ -147,13 +168,15 @@ CHROOT
 # that is the LIVE ISO's cmdline (archisobasedir=..., no root=), which
 # produces entries that drop to an initramfs emergency shell on first boot.
 # Write it here instead, where the real root UUID is known.
+# rootflags=subvol=@ is required: the root filesystem is a subvolume, and
+# without it the kernel mounts the top level, where there is no /sbin/init.
 ROOT_UUID="$(blkid -s UUID -o value "${P}3")"
 cat > /mnt/boot/refind_linux.conf <<EOF
-"Boot with standard options"  "root=UUID=${ROOT_UUID} rw ${CMDLINE}"
-"Boot to single-user mode"    "root=UUID=${ROOT_UUID} rw single"
-"Boot with minimal options"   "root=UUID=${ROOT_UUID} rw"
+"Boot with standard options"  "root=UUID=${ROOT_UUID} rw rootflags=subvol=@ ${CMDLINE}"
+"Boot to single-user mode"    "root=UUID=${ROOT_UUID} rw rootflags=subvol=@ single"
+"Boot with minimal options"   "root=UUID=${ROOT_UUID} rw rootflags=subvol=@"
 EOF
-echo "refind_linux.conf written for root=UUID=${ROOT_UUID}"
+echo "refind_linux.conf written for root=UUID=${ROOT_UUID} subvol=@"
 
 # --- provision ------------------------------------------------------------
 git clone "$REPO" /mnt/root/NyxOS
@@ -168,7 +191,11 @@ arch-chroot /mnt /bin/bash -euo pipefail -c '
   ansible-galaxy collection install -r requirements.yml
   ansible-playbook site.yml -c local -i localhost, -e @/root/.nyx-vars.yml
 '
-shred -u /mnt/root/.nyx-vars.yml 2>/dev/null || rm -f /mnt/root/.nyx-vars.yml
+# shred cannot guarantee anything on btrfs: copy-on-write means the
+# overwrite lands in new extents and the original blocks stay until they are
+# reclaimed. The file holds a hash rather than a plaintext password, so this
+# removes it without claiming the data is unrecoverable.
+rm -f /mnt/root/.nyx-vars.yml
 
 # Root stays locked (no password), matching Ubuntu/Fedora defaults. That
 # makes systemd's emergency shell unusable, so recovery depends on the

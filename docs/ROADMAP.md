@@ -11,8 +11,12 @@ External vSwitch. Gen 2 VM, 8GB static, 6 vCPU, 60GB, **Secure Boot off**,
 **TPM on**, Standard checkpoints, automatic checkpoints off, nested virt on.
 
 CachyOS install: **no desktop environment**, systemd-boot, no LUKS,
-`linux-cachyos`, "CachyOS Packages" yes, "Shell Configuration" **no**,
-base-devel yes.
+**btrfs** (the installer default), `linux-cachyos`, "CachyOS Packages" yes,
+"Shell Configuration" **no**, base-devel yes.
+
+The filesystem matters: `install.sh` builds btrfs with the same subvolume
+layout, so a checkpoint made on ext4 or XFS tests a different disk shape
+than the one that ships.
 
 Then `pacman -S openssh git ansible-core`, enable sshd, push key from Windows,
 verify passwordless, harden sshd, DHCP reservation, hosts entry.
@@ -132,7 +136,7 @@ Build on a CachyOS host, not plain Arch.
 
 **Required order:**
 
-1. LUKS on p3
+1. LUKS on p3, with btrfs inside the container rather than the reverse
 2. recovery partition populated; its UKI must also be signed, or it cannot
    boot when Secure Boot is the thing that failed
 3. `sbctl create-keys` then `enroll-keys --microsoft` (requires firmware
