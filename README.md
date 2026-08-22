@@ -51,6 +51,7 @@ roles/backup_rclone/  OneDrive sync via systemd timer
 profiles/             override dicts for untestable hardware
 scripts/run.ps1       Hyper-V dev loop: revert, boot, run
 scripts/install.sh    unattended bare-metal install
+scripts/render-check.py  renders all templates x all profiles, offline
 ```
 
 ## Dev loop
