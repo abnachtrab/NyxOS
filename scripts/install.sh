@@ -30,9 +30,20 @@ if [[ "${NYX_FORCE:-0}" != "1" ]] && ! grep -q 'nyxos.auto=1' /proc/cmdline; the
   exit 1
 fi
 
+# When the script is piped (curl | bash) stdin is the script itself, so read
+# would consume script text instead of keystrokes. Take input from the
+# terminal explicitly.
+if ! { exec 3< /dev/tty; } 2>/dev/null; then
+  echo "no controlling terminal. Download the script and run it directly:"
+  echo "  curl -sLO ${REPO}/raw/main/scripts/install.sh"
+  echo "  NYX_DISK=${DISK} NYX_FORCE=1 bash install.sh"
+  exit 1
+fi
+exec 3<&-
+
 echo "About to erase ${DISK}."
 lsblk "$DISK"
-read -rp "type ERASE to continue: " confirm
+read -rp "type ERASE to continue: " confirm < /dev/tty
 [[ "$confirm" == "ERASE" ]] || exit 1
 
 # --- credentials ----------------------------------------------------------
@@ -40,8 +51,8 @@ read -rp "type ERASE to continue: " confirm
 # pacstrap. Hashed immediately; the plaintext never leaves this shell and the
 # hash is passed by file, not on a command line visible in ps.
 while :; do
-  read -rsp "Password for ${PRIMARY_USER:-the primary user}: " pw1; echo
-  read -rsp "Confirm: " pw2; echo
+  read -rsp "Password for ${PRIMARY_USER:-the primary user}: " pw1 < /dev/tty; echo
+  read -rsp "Confirm: " pw2 < /dev/tty; echo
   [[ -n "$pw1" && "$pw1" == "$pw2" ]] && break
   echo "empty or mismatched, try again."
 done

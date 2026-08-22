@@ -74,9 +74,14 @@ About 30 seconds to a clean state versus ~15 minutes for a reinstall.
 ISO as normal, open a terminal, and run:
 
 ```bash
-curl -sL https://raw.githubusercontent.com/abnachtrab/NyxOS/main/scripts/install.sh \
-  | NYX_DISK=/dev/nvme0n1 NYX_FORCE=1 bash
+curl -sLO https://raw.githubusercontent.com/abnachtrab/NyxOS/main/scripts/install.sh
+NYX_DISK=/dev/nvme0n1 NYX_FORCE=1 bash install.sh
 ```
+
+Download rather than pipe. The script prompts for the ERASE confirmation and
+the user password; piping makes stdin the script itself. It reads from
+/dev/tty to work either way, but downloading also lets you read it before
+running something that formats a disk.
 
 It partitions, pacstraps, chroots, and runs the playbook. No user is created
 by the installer; `roles/base` creates `nyx_user` and nothing else.

@@ -103,6 +103,16 @@ emergency shell unusable ("Cannot open access to console, the root account is
 locked"), so recovery depends on the recovery partition or external media.
 Worth pulling the recovery partition earlier than Phase 10 for this reason.
 
+## curl | bash and read
+
+Piping the installer makes stdin the script itself, so `read` consumes script
+text rather than keystrokes — the ERASE prompt and the password loop both
+misbehave. All three prompts now read from `/dev/tty` explicitly, and the
+script exits with instructions if there is no controlling terminal.
+
+Documented usage is download-then-run, which also lets the script be read
+before it formats a disk.
+
 ## Password handling
 
 `install.sh` prompts before partitioning, hashes with `openssl passwd -6`
