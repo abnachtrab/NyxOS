@@ -103,6 +103,22 @@ emergency shell unusable ("Cannot open access to console, the root account is
 locked"), so recovery depends on the recovery partition or external media.
 Worth pulling the recovery partition earlier than Phase 10 for this reason.
 
+## Password handling
+
+`install.sh` prompts before partitioning, hashes with `openssl passwd -6`
+immediately, and writes the hash to `/root/.nyx-vars.yml` (0600) in the
+target. The playbook is invoked with `-e @/root/.nyx-vars.yml`, which makes
+Ansible skip its own `vars_prompt` — verified. The file is shredded after.
+
+Plaintext never leaves the installer's shell, and the hash is passed by file
+rather than on a command line where `ps` would expose it.
+
+The playbook's `vars_prompt` remains as the fallback for running
+`ansible-playbook` by hand on an installed system.
+
+`roles/base` uses `update_password: on_create`, so re-running the playbook
+does not reset an existing password.
+
 ## Known gaps
 
 - No LUKS in `install.sh` yet — p3 is plain ext4 until Phase 10.

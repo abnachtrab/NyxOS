@@ -22,6 +22,7 @@ TZ="${NYX_TZ:-America/Phoenix}"
 LOCALE="${NYX_LOCALE:-en_US.UTF-8}"
 KEYMAP="${NYX_KEYMAP:-us}"
 CMDLINE="${NYX_CMDLINE:-quiet nowatchdog}"
+PRIMARY_USER="${NYX_USER:-abnac}"   # display only; group_vars/all.yml is authoritative
 
 if [[ "${NYX_FORCE:-0}" != "1" ]] && ! grep -q 'nyxos.auto=1' /proc/cmdline; then
   echo "refusing to format ${DISK}: add nyxos.auto=1 to the kernel cmdline"
@@ -33,6 +34,19 @@ echo "About to erase ${DISK}."
 lsblk "$DISK"
 read -rp "type ERASE to continue: " confirm
 [[ "$confirm" == "ERASE" ]] || exit 1
+
+# --- credentials ----------------------------------------------------------
+# Asked here rather than by the playbook's vars_prompt, which only runs after
+# pacstrap. Hashed immediately; the plaintext never leaves this shell and the
+# hash is passed by file, not on a command line visible in ps.
+while :; do
+  read -rsp "Password for ${PRIMARY_USER:-the primary user}: " pw1; echo
+  read -rsp "Confirm: " pw2; echo
+  [[ -n "$pw1" && "$pw1" == "$pw2" ]] && break
+  echo "empty or mismatched, try again."
+done
+PW_HASH="$(printf '%s' "$pw1" | openssl passwd -6 -stdin)"
+unset pw1 pw2
 
 # --- partition ------------------------------------------------------------
 wipefs -a "$DISK"
@@ -132,11 +146,18 @@ echo "refind_linux.conf written for root=UUID=${ROOT_UUID}"
 
 # --- provision ------------------------------------------------------------
 git clone "$REPO" /mnt/root/NyxOS
+
+# Defining nyx_password as an extra var makes Ansible skip its vars_prompt.
+install -m 600 /dev/null /mnt/root/.nyx-vars.yml
+printf 'nyx_password: "%s"\n' "$PW_HASH" > /mnt/root/.nyx-vars.yml
+unset PW_HASH
+
 arch-chroot /mnt /bin/bash -euo pipefail -c '
   cd /root/NyxOS
   ansible-galaxy collection install -r requirements.yml
-  ansible-playbook site.yml -c local -i localhost,
+  ansible-playbook site.yml -c local -i localhost, -e @/root/.nyx-vars.yml
 '
+shred -u /mnt/root/.nyx-vars.yml 2>/dev/null || rm -f /mnt/root/.nyx-vars.yml
 
 # Root stays locked (no password), matching Ubuntu/Fedora defaults. That
 # makes systemd's emergency shell unusable, so recovery depends on the
