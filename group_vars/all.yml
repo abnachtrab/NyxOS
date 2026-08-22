@@ -19,6 +19,13 @@ nyx_kernel_headers: "{{ nyx_kernel }}-headers"
 nyx_aur_helper:     "yay"
 nyx_shell: /usr/bin/zsh
 
+# English (US) UI, qwerty. Glyph coverage for other scripts comes from the
+# noto-* packages below, not from locale. Mirrors the defaults in
+# scripts/install.sh.
+nyx_locale:   "en_US.UTF-8"
+nyx_keymap:   "us"
+nyx_timezone: "America/Phoenix"
+
 # Repo sections are configured by the CachyOS installer and read by
 # roles/base. nyx_profile.march is used by scripts/install.sh when selecting
 # a tier for a from-scratch pacstrap.

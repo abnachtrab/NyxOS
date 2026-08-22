@@ -60,6 +60,9 @@ nyx_hypr_conf_parts:
   - keybinds
   - rules
 
-nyx_hypr_wallpaper: /usr/share/backgrounds/nyxos/wallpaper.png
+# Empty renders a solid base colour. Point this at a real file once
+# roles/branding ships one; a missing path makes hyprlock/hyprlogin
+# fail to draw a background rather than falling back.
+nyx_hypr_wallpaper: ""
 nyx_hypr_idle_lock_secs: 300
 nyx_hypr_idle_dpms_secs: 600

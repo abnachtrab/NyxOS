@@ -107,6 +107,17 @@
   when: nyx_hypr_greeter == 'hyprlogin'
   notify: restart greetd
 
+# Package-owned path. hyprlogin ships a us,fr / azerty layout here; this
+# replaces it. A hyprlogin update will overwrite it again, so re-run the role
+# after upgrading that package.
+- name: hyprlogin greeter compositor config
+  ansible.builtin.template:
+    src: hyprland-greeter.conf.j2
+    dest: /usr/share/hyprlogin/hyprland-greeter.conf
+    mode: "0644"
+  when: nyx_hypr_greeter == 'hyprlogin'
+  notify: restart greetd
+
 - name: Enable greetd
   ansible.builtin.systemd_service:
     name: greetd

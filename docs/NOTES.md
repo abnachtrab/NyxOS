@@ -149,3 +149,46 @@ Desktop branching that remains:
 
 Override profiles: `hyperv`, `intel-desktop-v3`, `amd-desktop-v4`,
 `nvidia-desktop-v4`.
+
+## hyprlogin: verified paths and known breakage
+
+`pacman -Ql hyprlogin-git` confirms:
+
+- `/usr/bin/hyprlogin`, `/usr/bin/start-hyprland`
+- `/etc/hyprlogin/hyprlogin.conf` — greeter appearance, hyprlock format
+- `/usr/share/hyprlogin/hyprland-greeter.conf` — the compositor config the
+  greeter runs inside
+- `/usr/share/hyprlogin/greetd-config.toml` — reference greetd config; our
+  template matches it apart from comments
+
+Both `/etc/hyprlogin/hyprlogin.conf` and
+`/usr/share/hyprlogin/hyprland-greeter.conf` are package-owned, so a
+hyprlogin update overwrites them and the role must be re-run.
+
+**hyprlogin-git does not compile against current hyprutils.**
+
+    Seat.cpp:172:12: error: cannot convert
+    'Hyprutils::Memory::CSharedPointer<CCWlSeat>' to 'bool' in return
+
+`CSharedPointer::operator bool()` is explicit upstream; hyprlogin returns the
+pointer directly from a bool function. Local fix for testing:
+
+    cd ~/.cache/yay/hyprlogin-git
+    sed -i 's/return m_pSeat;/return m_pSeat != nullptr;/' \
+      src/hyprlogin-src/src/core/Seat.cpp
+    makepkg -ei          # -e is required; makepkg wipes $srcdir otherwise
+
+This is local only. A from-scratch install hits the same error, so
+`hyprlogin-git` should stay out of `nyx_packages_aur` until upstream fixes
+it, and `nyx_hypr_greeter: tuigreet` is the working fallback.
+
+One failing AUR package aborts the whole playbook run. That is the
+reproducibility cost of the AUR, and it is left fatal deliberately — a silent
+AUR failure is worse than a loud one.
+
+## Wallpaper
+
+`nyx_hypr_wallpaper` defaults to empty, which makes hyprlock, hyprlogin, and
+hyprpaper use a solid `base` colour. A path pointing at a file that does not
+exist makes the hyprlock-family greeters fail to draw a background rather
+than falling back, so do not set it until roles/branding ships a real image.
