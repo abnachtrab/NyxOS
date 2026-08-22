@@ -1,5 +1,0 @@
----
-# TODO — see docs/ROADMAP.md. Stubbed so site.yml runs end to end.
-- name: laptop placeholder
-  ansible.builtin.debug:
-    msg: "role 'laptop' not implemented yet (profile: {{ nyx_profile }})"
