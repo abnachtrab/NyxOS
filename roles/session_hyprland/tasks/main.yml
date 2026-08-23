@@ -51,20 +51,35 @@
 - name: Run the ii installer
   block:
     # Installs the illogical-impulse-* meta-packages and copies the config
-    # tree. Prompts without -f, and with stdin closed that is a hang rather
-    # than a failure — see nyx_ii_setup_args.
+    # tree. Long: a full pacman -Syu, then Quickshell built against Qt6.
+    #
+    # < /dev/null is the important part. Any prompt the flags do not cover
+    # reads EOF and the script fails, instead of sitting there forever with
+    # Ansible showing nothing. async gives a second backstop.
+    #
+    # Output goes to a file because Ansible buffers a command's output until
+    # it returns; tail that log to see whether it is working or stuck.
     #
     # changed_when tracks the checkout moving, which is an approximation:
     # the installer can do work when upstream has not changed, and this
     # reports ok in that case.
     - name: setup install
-      ansible.builtin.command:
-        argv: "{{ ['./setup', 'install'] + nyx_ii_setup_args }}"
+      ansible.builtin.shell:
+        cmd: >-
+          ./setup install {{ nyx_ii_setup_args | join(' ') }}
+          < /dev/null >> {{ nyx_ii_setup_log }} 2>&1
         chdir: "{{ nyx_ii_checkout }}"
       become: true
       become_user: "{{ nyx_user }}"
       register: nyx_ii_setup
+      async: "{{ nyx_ii_setup_timeout }}"
+      poll: 15
       changed_when: nyx_ii_clone.changed
+
+    - name: Where to watch it
+      ansible.builtin.debug:
+        msg: "tail -f {{ nyx_ii_setup_log }}"
+      when: nyx_ii_setup is not defined or nyx_ii_setup.rc | default(0) != 0
   always:
     - name: Revoke temporary passwordless sudo
       ansible.builtin.file:

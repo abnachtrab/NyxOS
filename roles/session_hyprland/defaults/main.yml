@@ -34,6 +34,9 @@ nyx_ii_checkout: "/home/{{ nyx_user }}/.cache/dots-hyprland"
 nyx_ii_setup_args:
   - "-f"
   - "--skip-backup"
+  # The greeting ends in a pause. -f is documented as covering confirms, but
+  # the greeting is a separate flag and cheaper to pass than to test.
+  - "--skip-allgreeting"
 
 # Notification daemons claim org.freedesktop.Notifications on the session bus.
 # Only one process can hold it, so anything left installed races Quickshell's
@@ -47,6 +50,12 @@ nyx_ii_conflicting_daemons:
 # the AUR-built versions and conflicts; upstream declines to edit pacman.conf
 # automatically, but roles/base already manages NoUpgrade in the same file.
 nyx_ii_ignore_group: true
+
+# The installer does a full pacman -Syu and then builds Quickshell against
+# Qt6. Ansible shows nothing until a command returns, so a working build and
+# a dead hang look identical — hence the log file and the timeout.
+nyx_ii_setup_log: "/home/{{ nyx_user }}/.cache/nyx-ii-setup.log"
+nyx_ii_setup_timeout: 5400
 
 # Tweaks layered over ii's config after it is applied, so they win. Anything
 # under files/ii-overlay/ is copied into ~/.config with the same tree shape.

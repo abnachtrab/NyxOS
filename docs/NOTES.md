@@ -31,10 +31,21 @@ On Hyper-V (Gen 2, `linux-cachyos`, Zen 5 host) unless stated otherwise.
 The switch to illogical-impulse is unrun. Everything in this section is
 reasoning, not observation.
 
-- **`./setup install -f` completing unattended.** `-f` is documented as
-  "force mode without any confirm", but whether it suppresses *every* prompt
-  is untested. Under Ansible stdin is closed, so a surviving prompt hangs the
-  play rather than failing it. Watch the first run.
+- **`./setup install` completing unattended.** The first real run stalled at
+  this task. Two candidates, and they look identical from Ansible: a prompt
+  the flags do not cover, or the installer simply being slow — it does a
+  full `pacman -Syu` and then builds Quickshell against Qt6, and Ansible
+  shows nothing until a command returns.
+
+  Both are now handled rather than diagnosed. `< /dev/null` makes any
+  surviving prompt read EOF and fail instead of waiting forever;
+  `--skip-allgreeting` covers the greeting's `pause`, which `-f` may not;
+  `async`/`poll` caps the task at `nyx_ii_setup_timeout`; and output goes to
+  `nyx_ii_setup_log` so it can be tailed while the play is still running.
+
+  To tell the two apart on a stuck run:
+  `ps -eo pid,stat,etime,args | grep -E 'setup|pacman|makepkg|cc1plus'`.
+  Compiler processes mean it is working.
 - **`NOPASSWD: ALL` covering the installer.** It runs `sudo_init_keepalive`
   and touches permissions and services, not just pacman. If it reaches for
   something outside the grant it prompts, and that hangs too.
