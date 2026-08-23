@@ -172,7 +172,7 @@ pacstrap -K /mnt \
   networkmanager sudo git ansible-core openssh \
   diffutils inetutils less logrotate lsb-release \
   man-db man-pages perl python texinfo usbutils which \
-  zsh kitty
+  fish kitty
 
 # --- copy pacman state into the target ------------------------------------
 mkdir -p /mnt/etc/pacman.d

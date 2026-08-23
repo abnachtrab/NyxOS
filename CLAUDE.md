@@ -82,7 +82,9 @@ looks for duplicate keybinds. Two real collisions were caught this way.
   greeter switch. Both launch paths call `start-hyprland`, owned by the
   `hyprland` package. Verified on a real install: boots, greets,
   authenticates, and starts Hyprland.
-- No dotfiles role yet, so zsh prompts `zsh-newuser-install` on first login.
+- No dotfiles role, deliberately: ii owns the shell. fish is the login
+  shell and its config, including the starship prompt, comes from
+  `./setup install`.
 - `nyx_hypr_wallpaper` is empty on purpose. A path to a nonexistent file
   makes hyprlock fail to draw a background rather than falling back, so do
   not set it until roles/branding ships a real image.

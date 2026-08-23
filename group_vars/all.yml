@@ -14,9 +14,10 @@ nyx_url:         "https://github.com/abnachtrab/NyxOS"
 nyx_kernel:         "linux-cachyos"
 nyx_kernel_headers: "{{ nyx_kernel }}-headers"
 nyx_aur_helper:     "yay"
-# illogical-impulse ships fish config and a starship prompt. zsh stays the
-# login shell; nothing in ii requires fish to be the default.
-nyx_shell: /usr/bin/zsh
+# fish, configured entirely by illogical-impulse — it ships fish config and
+# a starship prompt. Installed in roles/base rather than left to ii, because
+# roles/base sets the login shell and runs first.
+nyx_shell: /usr/bin/fish
 
 # English (US) UI, qwerty. Glyph coverage for other scripts comes from the
 # noto-* packages below, not from locale. Mirrors the defaults in
@@ -42,10 +43,7 @@ nyx_packages_base:
   - reflector
   - fastfetch
   - kitty
-  - zsh
-  - zsh-completions
-  - zsh-autosuggestions
-  - zsh-syntax-highlighting
+  - fish
   - eza
   - bat
   - fd

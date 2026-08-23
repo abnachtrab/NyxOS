@@ -162,18 +162,6 @@
     group: "{{ nyx_user }}"
     mode: "0644"
 
-# ii ships a zsh colourscheme drop-in. nyx_shell is zsh, so wire it up;
-# there is no dotfiles role to own ~/.zshrc yet.
-- name: ii colourscheme in zshrc
-  ansible.builtin.lineinfile:
-    path: "/home/{{ nyx_user }}/.zshrc"
-    line: "source ~/.config/zshrc.d/dots-hyprland.zsh"
-    create: true
-    owner: "{{ nyx_user }}"
-    group: "{{ nyx_user }}"
-    mode: "0644"
-  when: nyx_shell | basename == 'zsh'
-
 - name: Session desktop entry
   ansible.builtin.copy:
     src: hyprland.desktop

@@ -56,8 +56,7 @@ sections below this one record things that were actually run.
   when become_user owns it; breaks if the playbook runs as root against a
   different `nyx_user`.
 - `nyx_hypr_wallpaper` is still empty and there is no dotfiles role, so a
-  fresh session has no wallpaper and zsh prompts `zsh-newuser-install` on
-  the first terminal.
+  fresh session has no wallpaper, so matugen keeps ii's built-in colours.
 
 ## Theme
 
@@ -386,7 +385,9 @@ to load was the one carrying the VM software-GL block.
 
 Upstream's own post-install notes, all handled in the role: remove
 conflicting notification daemons, add `IgnoreGroup = illogical-impulse` to
-pacman.conf, source `~/.config/zshrc.d/dots-hyprland.zsh` from `.zshrc`.
+pacman.conf. The zsh colourscheme drop-in is not used — fish is the login
+shell and ii configures it directly, which is why `--skip-fish` is not
+passed.
 
 **Do not select UWSM** when picking a session at the greeter. ii says so
 explicitly; using it does not break the dotfiles but pulls in autostarted

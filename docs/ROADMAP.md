@@ -84,9 +84,9 @@ stubbed.
 Config syntax drift found on that first boot is written up in NOTES.md —
 `togglesplit` and `windowrulev2`.
 
-Still to do: a dotfiles role with a real `.zshrc` (zsh prompts
-`zsh-newuser-install` on first login), and a wallpaper — `nyx_hypr_wallpaper`
-points at a file that does not exist yet.
+Still to do: a wallpaper — `nyx_hypr_wallpaper` is empty, and matugen has
+nothing to derive a colour scheme from without one. Shell config is ii's
+job now, so no dotfiles role is planned.
 
 ## Phase 6 — gpu
 
