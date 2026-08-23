@@ -71,6 +71,15 @@
     - config.jsonc
     - style.css
 
+- name: Ozone flag files
+  ansible.builtin.template:
+    src: flags.conf.j2
+    dest: "/home/{{ nyx_user }}/.config/{{ item }}-flags.conf"
+    owner: "{{ nyx_user }}"
+    group: "{{ nyx_user }}"
+    mode: "0644"
+  loop: "{{ nyx_hypr_flag_files }}"
+
 - name: Spotify on Wayland
   ansible.builtin.copy:
     src: spotify-launcher.conf

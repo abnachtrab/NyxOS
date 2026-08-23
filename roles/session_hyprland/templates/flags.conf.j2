@@ -1,0 +1,5 @@
+{# Rendered once per entry in nyx_hypr_flag_files. Arch's launcher wrappers
+   read ~/.config/<name>-flags.conf and append each line to the command. #}
+{% for flag in nyx_hypr_ozone_flags %}
+{{ flag }}
+{% endfor %}

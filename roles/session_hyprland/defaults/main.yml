@@ -45,6 +45,19 @@ nyx_hypr_dm_packages:
 nyx_hypr_packages_apps:
   - spotify-launcher
 
+# Chromium and Electron do not pick Wayland on their own.
+# ELECTRON_OZONE_PLATFORM_HINT in conf.d/env.conf covers Electron 28 and
+# newer; these files cover older builds and Chromium itself, which ignores
+# the hint entirely. Arch's launcher wrappers read
+# ~/.config/<name>-flags.conf, so add a name here when the matching package
+# lands — chromium, brave, code. VSCode is known not to honour its file.
+nyx_hypr_ozone_flags:
+  - "--enable-features=UseOzonePlatform"
+  - "--ozone-platform=wayland"
+
+nyx_hypr_flag_files:
+  - electron
+
 nyx_hypr_terminal: kitty
 nyx_hypr_filemanager: nautilus
 nyx_hypr_modkey: SUPER

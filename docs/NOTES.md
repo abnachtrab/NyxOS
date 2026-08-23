@@ -335,3 +335,23 @@ readable until the machine has booted with the new initramfs.
 cmdline is Phase 10. The modprobe.d file is what actually takes effect
 today. Left in place because Phase 10 needs it, but do not count it as the
 mechanism.
+
+## Forcing Chromium and Electron onto Wayland
+
+Three mechanisms, because none of them covers everything.
+
+- `ELECTRON_OZONE_PLATFORM_HINT=auto` in `conf.d/env.conf`. Covers Electron
+  28 and newer. Chromium itself ignores it.
+- `~/.config/<name>-flags.conf`, rendered from `nyx_hypr_ozone_flags` for
+  every entry in `nyx_hypr_flag_files`. Arch's launcher wrappers read these
+  and append each line to the command. Only `electron` is listed today; add
+  `chromium`, `brave`, or `code` when the matching package lands, since the
+  file does nothing without the wrapper that reads it. VSCode is known not
+  to honour its file.
+- App-specific config where the launcher has its own format —
+  `spotify-launcher.conf` is TOML with an `extra_arguments` array, not a
+  flags file, because Spotify is CEF rather than Electron and comes through
+  its own wrapper.
+
+An unused flags file is harmless, unlike `nyx_hypr_wallpaper`: nothing reads
+it until the corresponding wrapper exists.
