@@ -1,125 +1,211 @@
 # Notes
 
-## Unverified — check before relying on these
+What has been verified against real hardware, what is still assumed, and the
+traps that cost a debugging session. Rewritten after the switch to
+illogical-impulse; anything about the old NyxOS palette and hand-written
+Hyprland config is gone with it.
 
-Written from memory during design, and not confirmed against upstream. The
-sections below this one record things that were actually run.
+## Verified by running
 
-- **CachyOS signing key ID** for the archiso build host. Take it from the official install
-  documentation.
-- **`sbctl status --json` field names** — `roles/detect` reads `secure_boot`
+On Hyper-V (Gen 2, `linux-cachyos`, Zen 5 host) unless stated otherwise.
+
+- `roles/detect` runs clean and is safe standalone.
+- `ansible_virtualization_type` returns `VirtualPC`; `march` returns
+  `x86-64-v4`; `has_tpm` true with the vTPM enabled; `secureboot` false via
+  soft-failed sbctl. `profiles/hyperv.json` matches.
+- `-e @profiles/...` reports OVERRIDE and skips detection.
+- CachyOS repo sections on a Zen 5 install are `cachyos-znver4`,
+  `cachyos-core-znver4`, `cachyos-extra-znver4`, plus generic `cachyos`. All
+  four Include `cachyos-v4-mirrorlist` or `cachyos-mirrorlist`. Names are
+  Zen-generation-specific and do not derive from the x86-64-vN level, so
+  `roles/base` reads them instead of generating them. **v3 naming on Intel
+  hardware is unconfirmed.**
+- `roles/base`: repo assert reads all four sections, `7zip` resolves, yay
+  bootstraps, the temporary sudoers grant is revoked.
+- A full install boots, reaches tuigreet, authenticates, and starts
+  Hyprland. That was on the pre-ii config; the shell has been replaced
+  since, so see "Not yet verified".
+
+## Not yet verified
+
+The switch to illogical-impulse is unrun. Everything in this section is
+reasoning, not observation.
+
+- **`./setup install -f` completing unattended.** `-f` is documented as
+  "force mode without any confirm", but whether it suppresses *every* prompt
+  is untested. Under Ansible stdin is closed, so a surviving prompt hangs the
+  play rather than failing it. Watch the first run.
+- **`NOPASSWD: ALL` covering the installer.** It runs `sudo_init_keepalive`
+  and touches permissions and services, not just pacman. If it reaches for
+  something outside the grant it prompts, and that hangs too.
+- **`hypr/custom/env.lua` actually being sourced.** ii's docs describe
+  `custom/` as the override directory and name `env.lua`. If the path is
+  wrong the file is inert, and under Hyper-V that means no software GL and
+  no session.
+- **`roles/gpu` on real hardware.** Untestable in Hyper-V — no PCI GPU. Use
+  `-e @profiles/...` for the render path, but nothing there proves DKMS
+  builds or that modeset takes.
+- **btrfs root booting.** `rootflags=subvol=@` is written but has not been
+  booted from. If the machine drops to an initramfs shell, that line in
+  `refind_linux.conf` is the first suspect.
+- **Whether single-device btrfs needs anything in `mkinitcpio.conf`.** The
+  `filesystems` hook should pull the module in via autodetect and the
+  `btrfs` hook is for multi-device arrays, but this is untested.
+
+## Check against upstream before relying on it
+
+- **CachyOS signing key ID** for the archiso build host. Take it from the
+  official install documentation.
+- **`sbctl status --json` field names.** `roles/detect` reads `secure_boot`
   and nothing else. `setup_mode` and `installed` are unread; Phase 10 needs
-  `setup_mode`, so confirm all three on the installed version. The failure
-  path is verified: with sbctl absent the task fails soft and `secureboot`
-  falls back to `false`.
+  `setup_mode`, so confirm all three. The failure path is verified: with
+  sbctl absent the task fails soft and `secureboot` falls back to `false`.
 - **Hyper-V framebuffer module** — `hyperv_drm` on current kernels,
   `hyperv_fb` on older. The `video=` cmdline param differs.
-- **nvidia-open vs proprietary cutoff.** Turing and newer for open modules;
-  recent driver branches dropped Maxwell/Pascal/Volta entirely.
+- **nvidia-open vs proprietary cutoff.** Turing and newer for the open
+  modules; recent branches dropped Maxwell/Pascal/Volta entirely.
   `nyx_nvidia_packages` names `nvidia-open-dkms` outright, so a pre-Turing
   card needs that list overridden — chwd would pick a legacy branch and
   pacman will not hold both.
 - **Intel media driver split.** `intel-media-driver` for Gen8+,
   `libva-intel-driver` below. `i915` vs `xe` on the newest parts.
 
-## Verified on Hyper-V (Gen 2, linux-cachyos, Zen 5 host)
+## illogical-impulse
 
-- CachyOS repo sections on a Zen 5 install are `cachyos-znver4`,
-  `cachyos-core-znver4`, `cachyos-extra-znver4`, plus generic `cachyos`.
-  All four Include `/etc/pacman.d/cachyos-v4-mirrorlist` or
-  `cachyos-mirrorlist`. Section names are Zen-generation-specific and do not
-  derive from the x86-64-vN level, so `roles/base` reads them instead of
-  generating them. The v3 naming on Intel hardware is still unconfirmed;
-  check on real hardware.
-- `ansible_virtualization_type` returns `VirtualPC`. Other keys pruned.
-- `march` detection returns `x86-64-v4`; host CPU flags pass through.
-- `has_tpm` true with the vTPM enabled.
+ii owns the shell: Quickshell bar, notifications, launcher, OSD, session
+menu, the Hyprland config set, and the fish config with its starship prompt.
+It themes with matugen, deriving the scheme from the wallpaper at runtime.
+`roles/theme`, `nyx_palette` and `nyx_roles` were deleted for that reason —
+matugen and a fixed palette cannot both own colour.
 
-## Idempotency traps found on the second base run
+**The config format is Lua.** `hyprland.lua` loads internal libraries, then
+ii's environment and defaults, then `custom/`. NyxOS environment goes in
+`custom/env.lua` as `hl.env()` calls. A hyprlang `.conf` file in `custom/`
+is silently never read — that cost a commit, and the file that failed to
+load was the one carrying the VM software-GL block.
 
-- `ansible.builtin.command` cannot run shell builtins. `command -v` there
-  returns rc!=0 forever and silently re-runs whatever it guards.
-- `vars_prompt` with `encrypt:` re-salts every run, so `user:` reports changed
-  unless `update_password: on_create` is set.
-- Create/revoke pairs (the temporary sudoers grant) always report changed
-  unless gated on whether the work between them is actually needed.
+**`./setup install` prompts by default**, which under Ansible is a hang, not
+a failure. `-f` is the unattended path. Flags from
+`sdata/subcmd-install/options.sh`: `--core` (skips fish, fontconfig,
+plasma-browser-integration), `--skip-backup`, `--skip-quickshell`,
+`--skip-hyprland`, `--skip-hyprland-entry`, `-s/--skip-sysupdate`,
+`-c/--clean`, `-F/--firstrun`, `--fontset <set>`.
 
-## Open questions
+Current flags are `-f --skip-backup`. `-s` is deliberately unused: ii
+installs packages built against current libraries and Arch has no supported
+partial-upgrade state, so skipping the upgrade trades a slow run for a
+broken one.
 
-- Two user accounts now exist: `adam` (from the CachyOS installer) and
-  `abnac` (created by `roles/base` from `nyx_user`). Pick one. `run.ps1`
-  defaults to `abnac@nyxos-test`, which only works if the checkpoint was
-  made after that account existed.
-- `/etc/sudoers.d/10-installer` was left by the CachyOS installer. Check its
-  contents; if it grants passwordless sudo, `roles/base` should remove it.
-- Ansible warns that `/home/<user>/.ansible/tmp` was created 0700. Benign
-  when become_user owns it; breaks if the playbook runs as root against a
-  different `nyx_user`.
-- `nyx_hypr_wallpaper` is still empty and there is no dotfiles role, so a
-  fresh session has no wallpaper, so matugen keeps ii's built-in colours.
+Upstream post-install steps, all handled in the role:
 
-## Theme
+- conflicting notification daemons removed. Only one process can own
+  `org.freedesktop.Notifications`; the loser silently shows nothing.
+- `IgnoreGroup = illogical-impulse` in `pacman.conf`. Upstream calls editing
+  it automatically risky, but `roles/base` already manages `NoUpgrade`
+  there.
 
-Palette and semantic role map live in `roles/theme/defaults/main.yml`.
-Applications consume role names (primary, success, panel) rather than colour
-names, so reassigning a role is one line.
+**Do not select UWSM** at a greeter. ii says so explicitly: it does not break
+the dotfiles but pulls in autostarted junk from other desktop environments,
+such as duplicate authentication dialogs. tuigreet runs `--cmd
+start-hyprland`, which bypasses session selection, so this only matters if
+the greeter changes.
 
-Adding an application: write a template in `roles/theme/templates/`, add a
-line to `nyx_theme_targets`. Do not put hex values anywhere else.
+Updating is manual upstream — `git stash`, `git pull`, `./setup install`.
+The role re-runs the installer every play against `nyx_ii_version`, which
+tracks `main`. Pin it to a tag or commit once the desktop is one worth
+keeping.
 
-Primary is haze `#C7B8E8` (pastel purple), secondary is mist `#B4CDE6`
-(pastel blue).
+NyxOS tweaks go in `files/ii-overlay/`, copied after ii so they win, mirroring
+the `~/.config` tree shape.
 
-Still unthemed: the greetd greeter (tuigreet takes a TTY colour scheme, not
-the palette), GTK, Qt (Kvantum), rEFInd, Plymouth, bat, fzf, zsh syntax
-highlighting, btop. `hyprlock.conf` already reads `nyx_palette` directly.
+## Traps found the hard way
 
-## Verified by running
+**`arch-chroot` shares the host's `/proc`.** It bind-mounts rather than
+making a namespace, so anything reading `/proc/cmdline` or the UTS hostname
+inside it sees the **live ISO**. `refind-install` runs `mkrlconf`, which
+builds `refind_linux.conf` from `/proc/cmdline` — producing entries with
+`archisobasedir=...` and no `root=`, and a machine that drops to an
+emergency shell on first boot. `install.sh` now writes that file itself
+after the chroot block, from `blkid` on the real root partition.
+`roles/detect` reads `/etc/hostname` for the same reason. `lspci` and DMI
+are fine — they describe hardware, which is shared.
 
-- `roles/detect` and `roles/theme` run clean; theme is idempotent on the
-  second pass (changed=0).
-- Rendered `colors.sh` sources into a shell with the expected role values.
-- `-e @profiles/...` correctly reports OVERRIDE and skips detection.
+**Stale superblocks survive `sgdisk -Z`.** It zaps the partition table, not
+the filesystem superblocks inside the ranges it re-creates. On a re-install
+the previous ext4 super sat at its old offset, `mkfs.btrfs` reported success,
+and the next `mount /dev/sda3 /mnt` failed with "probably corrupted
+filesystem" — libblkid probed the stale signature first. `mount -t btrfs`
+worked immediately. Fixed with `wipefs -a` per partition after `partprobe`,
+plus an explicit `-t` on every mount. Only reproduces on a re-install, which
+is exactly what the dev loop does.
 
-Bug found and fixed: microarch detection originally shelled out to
-`/lib/ld-linux-x86-64.so.2`. That path only exists where /lib is a symlink to
-/usr/lib (Arch does this, Debian/Ubuntu do not), and the task failed soft —
-reporting x86-64-v1 on a v4 machine. It now derives the level from
-/proc/cpuinfo flags, which has no path dependency.
+**Microarch detection must come from `/proc/cpuinfo` flags**, not
+`/lib/ld-linux-x86-64.so.2`. That path only exists where `/lib` symlinks to
+`/usr/lib`, and the task failed soft — reporting v1 on a v4 machine. Getting
+it wrong selects the wrong CachyOS repo tier, which means SIGILL in
+arbitrary binaries rather than a clean error.
 
-## Bugs found on the first real install
+**`curl | bash` makes stdin the script**, so `read` consumes script text
+instead of keystrokes. All three prompts in `install.sh` read from
+`/dev/tty`, and it exits with instructions when there is no controlling
+terminal. Documented usage is download-then-run anyway, which also lets the
+script be read before it formats a disk.
 
-**refind_linux.conf built from the wrong cmdline.** `refind-install` runs
-`mkrlconf`, which reads `/proc/cmdline`. `arch-chroot` bind-mounts the host's
-`/proc` rather than creating a namespace, so inside the chroot that is the
-live ISO's cmdline — `archisobasedir=arch archisosearchuuid=... cow_spacesize=10G`
-with no `root=`. Result: the initramfs cannot switch root, and the machine
-drops to an emergency shell on first boot. Fixed by writing
-`refind_linux.conf` from `install.sh` after the chroot block, using
-`blkid -s UUID -o value` on the real root partition.
+**Idempotency traps, found on the second `base` run.**
+`ansible.builtin.command` cannot run shell builtins — `command -v` there
+returns rc!=0 forever and silently re-runs whatever it guards.
+`vars_prompt` with `encrypt:` re-salts every run, so `user:` reports changed
+unless `update_password: on_create` is set. Create/revoke pairs, such as the
+temporary sudoers grant, always report changed unless gated on whether the
+work between them is needed.
 
-Anything else that reads `/proc` or `/sys` inside `arch-chroot` has the same
-exposure. `lspci` and DMI are fine (they describe hardware, which is shared);
-`/proc/cmdline` and the UTS hostname are not.
+**`start-hyprland` is owned by the `hyprland` package**, not by anything
+else. It was briefly assumed to come from a removed AUR package and both
+launch paths were switched to the bare `Hyprland` binary, which warns about
+not being started through a session manager. `pacman -Qo` on a real install
+disproved that. Set in `files/hyprland.desktop` and the tuigreet `--cmd`.
 
-**Hostname read from the live environment.** Same root cause —
-`ansible_hostname` reflects the running UTS namespace. `roles/detect` now
-reads `/etc/hostname` and falls back to the fact.
+## Filesystem
 
-**Root is deliberately locked**, matching Ubuntu/Fedora. That makes systemd's
-emergency shell unusable ("Cannot open access to console, the root account is
-locked"), so recovery depends on the recovery partition or external media.
-Worth pulling the recovery partition earlier than Phase 10 for this reason.
+p3 is btrfs with CachyOS's Calamares subvolume layout — `@`, `@home`,
+`@root`, `@srv`, `@cache`, `@tmp`, `@log` — mounted
+`noatime,compress=zstd:3`. Matching upstream means snapshot tooling written
+for CachyOS applies unchanged, and the test VM and a shipped install have
+the same shape. `@cache`, `@tmp` and `@log` are separate so a root snapshot
+does not drag package caches and journals along.
 
-## curl | bash and read
+The kernel cmdline needs `rootflags=subvol=@`. Without it the top-level
+subvolume is mounted, there is no `/sbin/init` there, and the failure looks
+like a missing root.
 
-Piping the installer makes stdin the script itself, so `read` consumes script
-text rather than keystrokes — the ERASE prompt and the password loop both
-misbehave. All three prompts now read from `/dev/tty` explicitly, and the
-script exits with instructions if there is no controlling terminal.
+`shred` is meaningless on copy-on-write — the overwrite lands in new extents
+and the original blocks stay until reclaimed — so the password-hash file is
+removed rather than shredded. It holds a hash, not a password, so this is a
+weaker claim rather than weaker exposure.
 
-Documented usage is download-then-run, which also lets the script be read
-before it formats a disk.
+p1 is FAT32 (ESP) and p2 stays ext4; a rescue volume is worth keeping dull.
+No LUKS yet — p3 is bare btrfs until Phase 10.
+
+## Mount state around install.sh
+
+Before anything is prompted for, the script refuses if a partition of
+`$DISK` is mounted at `/`, `/run/archiso/*` or `/run/initramfs/*` — the
+running system or the live medium, reachable only via a wrong `NYX_DISK`.
+Read-only; it unmounts nothing.
+
+After the ERASE confirmation and before the first write it releases the
+device: unmounts any existing `/mnt` tree, unmounts everything else backed by
+`$DISK`, and swapoffs any swap on it. A mounted partition cannot be
+repartitioned cleanly — mkfs refuses, or partprobe declines to re-read the
+table and the kernel keeps the old geometry — and both surface much later
+looking unrelated.
+
+At the end it unmounts `/mnt` itself. The tree is seven subvolumes deep and
+leaving it mounted is what the next run trips over.
+
+Sources are matched by prefix against `findmnt -rno TARGET,SOURCE`, which
+prints btrfs sources as `/dev/sda3[/@home]`. An equality test would miss
+every subvolume mount.
 
 ## Password handling
 
@@ -129,272 +215,125 @@ target. The playbook is invoked with `-e @/root/.nyx-vars.yml`, which makes
 Ansible skip its own `vars_prompt` — verified. The file is removed after.
 
 Plaintext never leaves the installer's shell, and the hash is passed by file
-rather than on a command line where `ps` would expose it.
+rather than on a command line where `ps` would expose it. The playbook's
+`vars_prompt` remains the fallback for running `ansible-playbook` by hand.
+`roles/base` uses `update_password: on_create`, so re-running does not reset
+an existing password.
 
-It is removed rather than shredded. `shred` guarantees nothing on btrfs:
-copy-on-write puts the overwrite in new extents and leaves the original
-blocks until they are reclaimed. What is written is a hash, not a password,
-so this is a downgrade in a claim rather than in exposure.
-
-The playbook's `vars_prompt` remains as the fallback for running
-`ansible-playbook` by hand on an installed system.
-
-`roles/base` uses `update_password: on_create`, so re-running the playbook
-does not reset an existing password.
-
-## Known gaps
-
-- No LUKS in `install.sh` yet — p3 is bare btrfs until Phase 10.
-- `nyx_backup_paths` is a guess; set it to real directories.
-- `branding` and `backup_rclone` are
-  stubs that print the profile and exit 0.
-
-## Scope
-
-Laptop support was removed entirely — no `is_laptop` fact, no `laptop` role,
-no battery/backlight/lid handling. Targets are VMs and desktops only.
-
-Desktop branching that remains:
-
-- **CPU vendor** (`cpu`): detected but consumed by nothing yet. Intended for
-  `intel-ucode` / `amd-ucode` selection and pstate; neither is implemented,
-  so no role branches on it today.
-- **GPU vendor** (`gpus`): chwd picks the driver; `roles/gpu` adds NVIDIA
-  early-KMS and cmdline, and `conf.d/env.conf` sets VA-API/VDPAU per vendor
-  (nvidia / radeonsi / iHD).
-- **VM** (`is_vm`): software GL and sshd, and skipping `roles/gpu` and
-  `roles/backup_rclone`. Nothing cosmetic — see "The VM is a design surface"
-  below.
-
-Override profiles: `hyperv`, `intel-desktop-v3`, `amd-desktop-v4`,
-`nvidia-desktop-v4`, `nvidia-intel-desktop-v4` (hybrid, for the i915
-ordering path).
-
-## Wallpaper
-
-`nyx_hypr_wallpaper` defaults to empty. `hyprlock.conf` then renders
-`color = rgb(<base>)`; `hyprpaper.conf` renders no `preload`/`wallpaper`
-pair at all, leaving the compositor's own background. A path pointing at a
-file that does not exist makes hyprlock fail to draw a background rather
-than falling back, so do not set it until roles/branding ships a real
-image.
-
-## Hyprland syntax drift (found on first boot)
-
-Four config errors on the first real session, all fixed:
-
-- `togglesplit` is a dwindle **layout message**, not a top-level dispatcher.
-  `bind = $mod, S, layoutmsg, togglesplit`.
-- `windowrulev2` was merged back into `windowrule` and now warns as
-  deprecated. Same argument syntax.
-- The session must launch via `start-hyprland`, not the bare `Hyprland`
-  binary, which warns about not being started through a session manager.
-  `/usr/bin/start-hyprland` is owned by the `hyprland` package, so it is
-  always present — it was briefly assumed to come from hyprlogin-git and
-  both launch paths were switched to the bare binary; `pacman -Qo` on a real
-  install disproved that. Set in `files/hyprland.desktop` and the tuigreet
-  `--cmd`.
-- Hyprland warns that `.conf` support is removed in 0.57. Not addressed;
-  the whole config set will need porting before that release.
-
-`hyprctl configerrors` lists parse failures in a running session and is the
-fastest way to catch these.
-
-## The VM is a design surface, not a performance target
-
-`is_vm` no longer changes anything cosmetic. `hyprland.conf` renders
-byte-identical on Hyper-V and on bare metal — blur, shadows, rounding, and
-animations are all on. The point of the VM is tuning how things look, which
-is impossible if the VM turns the looks off.
-
-`is_vm` still gates the things that are functional:
-
-- **Software GL** (`WLR_RENDERER_ALLOW_SOFTWARE`, `LIBGL_ALWAYS_SOFTWARE` in
-  `conf.d/env.conf`). Hyper-V exposes no DRI device, so without these
-  Hyprland refuses to start. This is not a slow-vs-fast setting.
-- **sshd** (`roles/base`) — enabled on test VMs only.
-
-`nyx_hypr_effects` is the separate escape hatch: set it false if llvmpipe
-becomes too slow to work in. It is not inferred from anything.
-
-## No guest tooling
-
-`roles/virt_guest` was removed. The VM is a disposable design surface, not
-something that needs integration services, clipboard sharing, or a guest
-agent. `is_vm` now gates exactly three things:
-
-- software GL in `conf.d/env.conf` (required for Hyprland to start)
-- sshd in `roles/base`
-- skipping `roles/gpu` and `roles/backup_rclone`
-
-`nyx_profile.virt` is still detected and reported. Nothing consumes it.
-
-## Filesystem
-
-p3 is btrfs with CachyOS's Calamares subvolume layout — `@`, `@home`,
-`@root`, `@srv`, `@cache`, `@tmp`, `@log` — mounted `noatime,compress=zstd:3`.
-Matching upstream means snapshot tooling written for CachyOS applies here
-unchanged, and the test VM and a shipped install have the same shape.
-
-`@cache`, `@tmp`, and `@log` are separate subvolumes so a root snapshot does
-not drag package caches and journals along with it.
-
-Two consequences already handled:
-
-- The kernel cmdline needs `rootflags=subvol=@`. Without it the top-level
-  subvolume is mounted, there is no `/sbin/init` there, and the boot fails
-  in a way that looks like a missing root.
-- `shred` is meaningless on COW; the password-hash file is removed instead.
-
-p1 is FAT32 (ESP) and p2 stays ext4 — a rescue volume is worth keeping dull.
-
-Unverified: whether a single-device btrfs root needs anything in
-`mkinitcpio.conf`. The `filesystems` hook should pull the module in via
-autodetect, and the `btrfs` hook is for multi-device arrays, but this has
-not been booted yet.
-
-## Stale superblocks survive sgdisk -Z
-
-Found on the first btrfs install. `mkfs.btrfs` reported success — label,
-UUID, profiles all normal — and the very next `mount /dev/sda3 /mnt` failed
-with "cannot mount; probably corrupted filesystem".
-
-The filesystem was fine. `mount -t btrfs /dev/sda3 /mnt` worked immediately.
-`sgdisk -Z` zaps the partition table but not the filesystem superblocks
-inside the ranges it then re-creates, so on a re-install the previous ext4
-super was still sitting at its old offset. An untyped `mount` probes with
-libblkid, found the stale ext4 signature first, and tried to mount the new
-btrfs as ext4.
-
-Only reproduces on a re-install, which is exactly the path the dev loop
-takes. Two fixes, both applied: `wipefs -a` on each partition after
-partprobe and before mkfs, and an explicit `-t` on every mount in the
-script. Never let mount guess on a disk this script has already written.
-
-## Mount state around install.sh
-
-Same class of problem, handled in three places.
-
-Before anything is prompted for, the script refuses outright if any
-partition of `$DISK` is mounted at `/`, `/run/archiso/*`, or
-`/run/initramfs/*` — that is the running system or the live medium, and the
-only way to reach it is a wrong `NYX_DISK`. The check is read-only and
-unmounts nothing.
-
-After the ERASE confirmation and before the first write, it releases the
-device: unmounts any existing `/mnt` tree, unmounts everything else backed
-by `$DISK`, and swapoffs any swap on it. A mounted partition cannot be
-repartitioned cleanly — mkfs refuses, or partprobe declines to re-read the
-table and the kernel keeps the old geometry — and both failures surface much
-later looking unrelated.
-
-At the end it unmounts `/mnt` itself rather than telling the caller to. The
-tree is seven subvolumes deep, and leaving it mounted is what the next run
-trips over. If the unmount fails it reports `fuser -vm /mnt` and says the
-install completed anyway.
-
-Sources are matched by prefix against `findmnt -rno TARGET,SOURCE`, which
-prints btrfs sources as `/dev/sda3[/@home]` — the prefix test handles that,
-an equality test would not.
-
-## NVIDIA requirements
+## NVIDIA
 
 From the Hyprland docs, implemented in `roles/gpu`:
 
 - **Userspace**: `nvidia-open-dkms`, `nvidia-utils`, `lib32-nvidia-utils`,
   `egl-wayland`, `libva-nvidia-driver`, in `nyx_nvidia_packages`. chwd still
-  runs and still owns driver selection for everything else, but it does not
-  guarantee this set. `libva-nvidia-driver` is what makes the
-  `LIBVA_DRIVER_NAME=nvidia` already set in `conf.d/env.conf` resolve to
-  anything; without it VA-API decode silently falls back to software.
-  `lib32-*` needs `[multilib]`; the role asserts it rather than enabling it,
-  matching how `roles/base` treats the CachyOS sections.
+  owns driver selection but does not guarantee this set.
+  `libva-nvidia-driver` is what makes the `LIBVA_DRIVER_NAME=nvidia` set in
+  `hypr/custom/env.lua` resolve to anything; without it VA-API decode
+  silently falls back to software. `lib32-*` needs `[multilib]`, which the
+  role asserts rather than enables.
 - **`/etc/modprobe.d/nvidia.conf`** — `options nvidia_drm modeset=1`.
-- **Early KMS** — `nvidia nvidia_modeset nvidia_uvm nvidia_drm` in
-  mkinitcpio's `MODULES`.
+- **Early KMS** — the four nvidia modules in mkinitcpio's `MODULES`.
 
 `i915` is prepended when the profile also lists an Intel GPU: on hybrid
 systems, loading the NVIDIA modules first makes Electron and Chromium apps
 stall for up to a minute after boot. `profiles/nvidia-intel-desktop-v4.json`
-exists to exercise that branch.
+exercises that branch.
 
 Early KMS can break resume from hibernation — the machine boots instead of
 resuming. Drop the modules if that appears.
 
-Verify after a reboot:
+Verify after a reboot: `cat /sys/module/nvidia_drm/parameters/modeset`
+should read `Y`. The role reports rather than asserts, since it is
+unreadable until the machine has booted with the new initramfs.
 
-    cat /sys/module/nvidia_drm/parameters/modeset    # expect Y
-
-The role reports this rather than asserting it, because the value is not
-readable until the machine has booted with the new initramfs.
-
-**`/etc/kernel/cmdline` is currently inert.** `roles/gpu` writes
+**`/etc/kernel/cmdline` is inert.** `roles/gpu` writes
 `nvidia_drm.modeset=1` there, but nothing reads it: `install.sh` writes
 `refind_linux.conf` directly, and the UKI that would consume a preset
-cmdline is Phase 10. The modprobe.d file is what actually takes effect
-today. Left in place because Phase 10 needs it, but do not count it as the
-mechanism.
+cmdline is Phase 10. The modprobe.d file is what takes effect. Left in place
+because Phase 10 needs it; do not count it as the mechanism.
+
+Suspend and hibernate services (`nvidia-suspend`, `nvidia-hibernate`,
+`nvidia-resume`) and `NVreg_PreserveVideoMemoryAllocations=1` are handled by
+Arch's packaging per the Hyprland docs, so the role does not set them.
+**Unconfirmed**, along with whether a package already owns
+`/etc/modprobe.d/nvidia.conf` — if one does, this role is clobbering it and
+should write `nyxos-nvidia.conf` instead. Check with
+`pacman -Qo /etc/modprobe.d/nvidia.conf`.
 
 ## Forcing Chromium and Electron onto Wayland
 
-Three mechanisms, because none of them covers everything.
+Three mechanisms, because none covers everything.
 
-- `ELECTRON_OZONE_PLATFORM_HINT=auto` in `conf.d/env.conf`. Covers Electron
-  28 and newer. Chromium itself ignores it.
+- `ELECTRON_OZONE_PLATFORM_HINT=auto` in `hypr/custom/env.lua`. Covers
+  Electron 28 and newer. Chromium itself ignores it.
 - `~/.config/<name>-flags.conf`, rendered from `nyx_hypr_ozone_flags` for
-  every entry in `nyx_hypr_flag_files`. Arch's launcher wrappers read these
-  and append each line to the command. Only `electron` is listed today; add
-  `chromium`, `brave`, or `code` when the matching package lands, since the
-  file does nothing without the wrapper that reads it. VSCode is known not
-  to honour its file.
-- App-specific config where the launcher has its own format —
-  `spotify-launcher.conf` is TOML with an `extra_arguments` array, not a
-  flags file, because Spotify is CEF rather than Electron and comes through
-  its own wrapper.
+  every entry in `nyx_hypr_flag_files`. Arch's launcher wrappers read these.
+  Only `electron` is listed; add `chromium` or `brave` when the package
+  lands, since the file does nothing without the wrapper that reads it.
+  VSCode is known not to honour its file.
+- App-specific config where the launcher has its own format.
+  `spotify-launcher.conf` is TOML with an `extra_arguments` array, because
+  Spotify is CEF rather than Electron and comes through its own wrapper.
 
-An unused flags file is harmless, unlike `nyx_hypr_wallpaper`: nothing reads
-it until the corresponding wrapper exists.
+An unused flags file is harmless — nothing reads it until the wrapper exists.
 
-## illogical-impulse
+## The VM is a design surface
 
-`./setup install` **prompts by default.** With stdin closed, as it is under
-Ansible, that is a hang rather than a failure — the play sits there. `-f`
-(`--force`, "force mode without any confirm") is the unattended path and is
-what `nyx_ii_setup_args` carries.
+`is_vm` gates functional things only:
 
-Other flags worth knowing, from `sdata/subcmd-install/options.sh`:
-`--core` (skip fish, fontconfig, plasma-browser-integration),
-`--skip-backup`, `--skip-quickshell`, `--skip-hyprland`,
-`--skip-hyprland-entry`, `-s/--skip-sysupdate`, `-c/--clean`.
+- **Software GL** (`WLR_RENDERER_ALLOW_SOFTWARE`, `LIBGL_ALWAYS_SOFTWARE` in
+  `hypr/custom/env.lua`). Hyper-V exposes no DRI device, so without these
+  Hyprland refuses to start. Not a slow-vs-fast setting.
+- **sshd** in `roles/base`, on test VMs only.
+- **skipping `roles/gpu` and `roles/backup_rclone`** in `site.yml`.
+- **the greetd restart handler**, which is skipped on VMs.
 
-`-s` is deliberately not used. ii installs packages built against current
-libraries and Arch has no supported partial-upgrade state, so skipping the
-system upgrade trades a slow run for a broken one.
+It changes nothing cosmetic. Effects have to render in the VM or they cannot
+be tuned there. `nyx_hypr_effects` was the manual escape hatch and is gone
+with the hand-written Hyprland config; ii owns those settings now.
 
-The installer runs `sudo_init_keepalive` and does more than pacman — it sets
-up permissions and services too. The temporary sudoers grant is therefore
-`NOPASSWD: ALL` rather than the pacman-only grant `roles/base` uses for
-makepkg. It is revoked in an `always:` block, so a failed install still
-gives it back.
+`roles/virt_guest` was removed — no integration services, clipboard sharing,
+or guest agent. `nyx_profile.virt` is still detected and reported. Nothing
+consumes it.
 
-**The config format is Lua.** `hyprland.lua` loads internal libraries, then
-ii's environment and defaults, then `custom/`. NyxOS environment goes in
-`custom/env.lua` as `hl.env()` calls. A hyprlang `.conf` file in `custom/`
-is silently never read — which cost one commit, since the file that failed
-to load was the one carrying the VM software-GL block.
+## Scope
 
-Upstream's own post-install notes, all handled in the role: remove
-conflicting notification daemons, add `IgnoreGroup = illogical-impulse` to
-pacman.conf. The zsh colourscheme drop-in is not used — fish is the login
-shell and ii configures it directly, which is why `--skip-fish` is not
-passed.
+Laptop support was removed entirely — no `is_laptop` fact, no `laptop` role,
+no battery, backlight or lid handling. VMs and desktops only.
 
-**Do not select UWSM** when picking a session at the greeter. ii says so
-explicitly; using it does not break the dotfiles but pulls in autostarted
-junk from other desktop environments, such as duplicate authentication
-dialogs. greetd runs tuigreet with `--cmd start-hyprland`, which bypasses
-session selection entirely, so this only matters if the greeter changes.
+Branching that remains:
 
-Updating is manual and documented upstream: `git stash`, `git pull`,
-`./setup install` again. The role re-runs the installer every play, so a
-pinned `nyx_ii_version` is what keeps the desktop from moving underfoot.
+- **CPU vendor** (`cpu`): detected, consumed by nothing. Intended for
+  `intel-ucode`/`amd-ucode` and pstate; neither is implemented.
+- **GPU vendor** (`gpus`): chwd picks the driver; `roles/gpu` adds NVIDIA
+  early KMS, modprobe.d and cmdline; `env.lua` sets VA-API/VDPAU per vendor.
+- **VM** (`is_vm`): as above.
+
+Override profiles: `hyperv`, `intel-desktop-v3`, `amd-desktop-v4`,
+`nvidia-desktop-v4`, `nvidia-intel-desktop-v4`.
+
+## Open questions
+
+- Two user accounts exist on the old VM: `adam` (CachyOS installer) and
+  `abnac` (`roles/base` from `nyx_user`). Pick one. `run.ps1` defaults to
+  `abnac@nyxos-test`, which only works if the checkpoint was made after that
+  account existed. A fresh `install.sh` install creates only `abnac`.
+- `/etc/sudoers.d/10-installer` was left by the CachyOS installer. Check its
+  contents; if it grants passwordless sudo, `roles/base` should remove it.
+- Ansible warns that `/home/<user>/.ansible/tmp` was created 0700. Benign
+  when become_user owns it; breaks if the playbook runs as root against a
+  different `nyx_user`.
+- `nyx_hypr_wallpaper` is empty, so matugen has nothing to derive a scheme
+  from and ii keeps its built-in colours.
+- `render-check.py` covers four templates now that ii owns the config. The
+  waybar-JSON and duplicate-keybind checks were deleted with their inputs; a
+  cheap Lua screen replaced them.
+
+## Known gaps
+
+- `branding` and `backup_rclone` are stubs that print the profile and exit 0.
+- `nyx_backup_paths` is a guess; set it to real directories.
+- Root is deliberately locked, matching Ubuntu and Fedora. That makes
+  systemd's emergency shell unusable ("Cannot open access to console, the
+  root account is locked"), so recovery depends on the recovery partition or
+  external media. Worth populating that partition earlier than Phase 10.

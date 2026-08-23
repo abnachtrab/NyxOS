@@ -6,8 +6,8 @@
 # nouveau, and non-GPU quirks such as broadcom-wl and handheld profiles.
 #
 # This role handles the parts chwd does not: the userspace Hyprland needs,
-# early KMS, and the modeset flag. Compositor env vars live in
-# roles/session_hyprland.
+# early KMS, and the modeset flag. Compositor env vars are rendered by
+# roles/session_hyprland into illogical-impulse's hypr/custom/env.lua.
 
 - name: List profiles chwd would apply
   ansible.builtin.command: chwd --list

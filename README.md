@@ -4,9 +4,10 @@ Ansible-based provisioning for my personal machines. CachyOS base, Hyprland
 session, hardware detection at runtime so one playbook covers a Hyper-V VM,
 an Intel desktop, an AMD desktop, and an NVIDIA desktop.
 
-The NyxOS palette is pastel accents on a near-black base. It is defined once
-in `roles/theme/defaults/main.yml` and rendered into shell, CSS, Hyprland,
-kitty, and waybar formats; no other file contains a hex value.
+The desktop is [illogical-impulse](https://github.com/end-4/dots-hyprland) —
+a Quickshell shell with its own Hyprland config, themed by matugen from the
+wallpaper. This repo provisions the machine it runs on and layers NyxOS
+tweaks over it; it does not reimplement it.
 
 ## Design
 
@@ -19,15 +20,15 @@ A profile can be supplied instead of detected:
 ansible-playbook site.yml -e @profiles/nvidia-desktop-v4.json
 ```
 
-This is how hardware paths are tested without the hardware — the NVIDIA role
+This is how hardware paths are tested without the hardware — the NVIDIA path
 can be exercised from a VM with no GPU.
 
 ## Detected facts
 
 | key | source | drives |
 |---|---|---|
-| `cpu` | `ansible_processor` | microcode |
-| `gpus` | `lspci -d ::0300 -d ::0302` | NVIDIA-specific KMS/cmdline work (chwd handles driver choice) |
+| `cpu` | `ansible_processor` | nothing yet; intended for microcode |
+| `gpus` | `lspci -d ::0300 -d ::0302` | NVIDIA userspace, early KMS, per-vendor env |
 | `march` | `/proc/cpuinfo` flags | CachyOS v3/v4 repo tier |
 | `virt` / `is_vm` | `ansible_virtualization_*` | software GL, sshd; skips GPU and backup roles |
 | `has_tpm` | `/sys/class/tpm/tpm0` | LUKS TPM enrolment |
@@ -43,16 +44,19 @@ site.yml              entrypoint; role gating lives here, not inside roles
 group_vars/all.yml    package lists, identity, kernel choice
 roles/detect/         facts only, never mutates
 roles/base/           repos, packages, user, AUR helper, sshd
-roles/gpu/            chwd autoconfigure + KMS/cmdline integration
-roles/theme/          NyxOS palette rendered into per-app formats
-roles/session_hyprland/
-roles/branding/       os-release et al
-roles/backup_rclone/  OneDrive sync via systemd timer
+roles/gpu/            chwd autoconfigure, NVIDIA userspace, early KMS
+roles/session_hyprland/  installs illogical-impulse, layers tweaks, login
+roles/branding/       os-release et al (stub)
+roles/backup_rclone/  OneDrive sync via systemd timer (stub)
 profiles/             override dicts for untestable hardware
 scripts/run.ps1       Hyper-V dev loop: revert, boot, run
 scripts/install.sh    unattended bare-metal install
 scripts/render-check.py  renders all templates x all profiles, offline
 ```
+
+`roles/session_hyprland/files/ii-overlay/` is copied into `~/.config` after
+illogical-impulse, so anything there wins. Config needing profile branching
+is a template rendered into ii's `hypr/custom/` instead — see `env.lua.j2`.
 
 ## Dev loop
 
@@ -74,6 +78,9 @@ ISO as normal, open a terminal, and run:
 
 ```bash
 curl -sLO https://raw.githubusercontent.com/abnachtrab/NyxOS/main/scripts/install.sh
+```
+
+```bash
 NYX_DISK=/dev/nvme0n1 NYX_FORCE=1 bash install.sh
 ```
 
@@ -85,9 +92,24 @@ running something that formats a disk.
 It partitions, pacstraps, chroots, and runs the playbook. No user is created
 by the installer; `roles/base` creates `nyx_user` and nothing else.
 
-Destructive. `NYX_DISK` has no default, and the script refuses to run
-unless `nyxos.auto=1` is on the kernel cmdline or `NYX_FORCE=1` is set, so
-booting recovery media cannot wipe a machine by accident.
+`NYX_BRANCH` provisions from a branch other than `main`, for trying an
+unproven one on a throwaway machine. `NYX_DISK`, `NYX_REPO`, `NYX_HOST`,
+`NYX_KERNEL`, `NYX_TZ`, `NYX_LOCALE`, `NYX_KEYMAP` and `NYX_RECOVERY_GB`
+override the rest.
+
+Destructive. `NYX_DISK` has no default, and the script refuses to run unless
+`nyxos.auto=1` is on the kernel cmdline or `NYX_FORCE=1` is set, so booting
+recovery media cannot wipe a machine by accident. It also refuses if the
+target disk is carrying the running system or the live medium.
+
+## Disk
+
+p1 ESP (FAT32, 1G), p2 recovery (ext4, 8G), p3 root (btrfs, rest).
+
+Root uses CachyOS's Calamares subvolume layout — `@`, `@home`, `@root`,
+`@srv`, `@cache`, `@tmp`, `@log` — mounted `noatime,compress=zstd:3`, so
+snapshot tooling written for CachyOS applies unchanged. LUKS lands under it
+in Phase 10.
 
 ## Secrets
 
@@ -99,13 +121,12 @@ per-machine and never leave it. `gitleaks` runs as a pre-commit hook.
 
 - [x] detect
 - [x] base
-- [x] session_hyprland
-- [ ] gpu
-- [ ] theme
+- [x] session_hyprland — reaches a login; the ii switch itself is unrun
+- [ ] gpu — written, untested on real hardware
 - [ ] branding
 - [ ] backup_rclone
 - [ ] archiso image
 - [ ] LUKS + sbctl + UKI
 
-See `docs/ROADMAP.md` for phase ordering and `docs/NOTES.md` for values that
-still need verifying against upstream.
+See `docs/ROADMAP.md` for phase ordering and `docs/NOTES.md` for what is
+verified against real hardware versus still assumed.

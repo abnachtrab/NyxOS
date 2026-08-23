@@ -23,10 +23,10 @@ Role gating lives in `site.yml`, not inside roles.
   scheme from the wallpaper at runtime. `roles/theme`, `nyx_palette` and
   `nyx_roles` were removed; there is no fixed NyxOS palette any more. Set
   `nyx_hypr_wallpaper` and let matugen follow it.
-- **`is_vm` gates functional things only** — software GL, sshd. It must NOT
-  disable blur, shadows, or animations: the VM is where the theme is tuned,
-  so it has to look like the real thing. `nyx_hypr_effects` is the separate
-  manual toggle.
+- **`is_vm` gates functional things only** — software GL in `env.lua`,
+  sshd, the greetd restart handler, and skipping the gpu and backup roles.
+  Nothing cosmetic: the VM is where the desktop is looked at, so it has to
+  look like the real thing. ii owns the effect settings now.
 - **ii owns the Hyprland config, and it is Lua.** `hyprland.lua` loads
   internal libraries, ii's environment and defaults, then `custom/`. Do not
   write `hyprland.conf` or hyprlang parts — `./setup install` rsyncs
@@ -47,8 +47,10 @@ Render templates against every profile — a Jinja error is a broken desktop:
 
     python3 scripts/render-check.py
 
-That checks all templates against all profiles, validates waybar's JSON, and
-looks for duplicate keybinds. Two real collisions were caught this way.
+That renders all templates against all profiles and screens the generated
+Lua. It covers much less than it used to — ii owns the config, so only the
+NyxOS overlay is templated — but a template that raises still leaves the
+machine without the file, and for `env.lua` that means no session in the VM.
 
 **Second-run idempotency is the test that matters**, not first-run success:
 
@@ -69,27 +71,31 @@ looks for duplicate keybinds. Two real collisions were caught this way.
   /usr/lib, and the failure is silent (reports v1 on a v4 machine).
 - `curl | bash` makes stdin the script, so `read` eats script text. All
   prompts in `install.sh` read from `/dev/tty`.
-- Hyprland syntax drifts: `togglesplit` is a `layoutmsg`, `windowrulev2` is
-  now `windowrule`.
 - One failing AUR package aborts the whole run. Left fatal deliberately.
+- `sgdisk -Z` does not wipe filesystem superblocks inside the partitions it
+  re-creates, so an untyped `mount` on a re-install probes the stale one and
+  reports the new filesystem as corrupt.
+- `./setup install` prompts unless given `-f`. Under Ansible stdin is
+  closed, so a surviving prompt hangs the play instead of failing it.
 
 ## Known open items
 
-- Hyprland warns `.conf` support is removed in 0.57; the whole config set
-  needs porting to the Lua format. **Adam is doing this himself** — do not
-  start it unasked.
-- greetd runs tuigreet, `nyx_packages_aur` is empty, and there is no
-  greeter switch. Both launch paths call `start-hyprland`, owned by the
-  `hyprland` package. Verified on a real install: boots, greets,
-  authenticates, and starts Hyprland.
-- No dotfiles role, deliberately: ii owns the shell. fish is the login
-  shell and its config, including the starship prompt, comes from
+- **The ii switch is unrun.** A pre-ii build reached a login; nothing since
+  has been booted. `./setup install -f` completing unattended, the
+  `NOPASSWD: ALL` grant covering it, and `hypr/custom/env.lua` actually
+  being sourced are all reasoning rather than observation.
+- greetd runs tuigreet, `nyx_packages_aur` is empty, and there is no greeter
+  switch. Both launch paths call `start-hyprland`, owned by the `hyprland`
+  package.
+- No dotfiles role, deliberately: ii owns the shell. fish is the login shell
+  and its config, including the starship prompt, comes from
   `./setup install`.
-- `nyx_hypr_wallpaper` is empty on purpose. A path to a nonexistent file
-  makes hyprlock fail to draw a background rather than falling back, so do
-  not set it until roles/branding ships a real image.
+- `nyx_hypr_wallpaper` is empty, so matugen has nothing to derive a scheme
+  from and ii keeps its built-in colours.
 - `nyx_profile.cpu` is detected but unconsumed — no explicit
   `intel-ucode`/`amd-ucode` selection yet.
+- `/etc/kernel/cmdline` is written by `roles/gpu` but read by nothing until
+  Phase 10; `modprobe.d` is what actually sets modeset.
 
 See `docs/ROADMAP.md` for phase ordering and `docs/NOTES.md` for everything
 verified against real hardware versus still assumed.

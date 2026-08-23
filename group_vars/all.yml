@@ -19,9 +19,9 @@ nyx_aur_helper:     "yay"
 # roles/base sets the login shell and runs first.
 nyx_shell: /usr/bin/fish
 
-# English (US) UI, qwerty. Glyph coverage for other scripts comes from the
-# noto-* packages below, not from locale. Mirrors the defaults in
-# scripts/install.sh.
+# English (US) UI, qwerty. Mirrors the defaults in scripts/install.sh.
+# Glyph coverage beyond Latin comes from illogical-impulse's font set, not
+# from anything here.
 nyx_locale:   "en_US.UTF-8"
 nyx_keymap:   "us"
 nyx_timezone: "America/Phoenix"

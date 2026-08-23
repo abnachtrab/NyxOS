@@ -57,36 +57,30 @@ test that matters.
 
 ---
 
-## Phase 5 — session_hyprland  *(booting in Hyper-V)*
+## Phase 5 — session_hyprland  *(ii switch unrun)*
 
-`hyprland.conf` sources `conf.d/theme.conf` (owned by roles/theme) plus
-monitors, env, autostart, keybinds, rules. Monitors and env are templated per
-profile; keybinds and rules are static.
+The shell is illogical-impulse: Quickshell bar, notifications, launcher,
+OSD, session menu, its own Hyprland config in Lua, and fish with starship.
+`./setup install` does the work; this role runs it non-interactively and
+layers NyxOS on top.
 
-- **greetd + tuigreet.** Both from the repos. A graphical greeter is a
-  later problem; nothing in the AUR is currently worth the reproducibility
-  cost, since one failing build aborts the run.
-- **Both portals installed**, with `hyprland-portals.conf` setting the
-  preference explicitly. Without it the backend is chosen by filename sort
-  order and screenshare breaks non-deterministically.
-- **VM branch is functional only**: software GL, so Hyprland can start at
-  all under Hyper-V. Effects are NOT disabled — the VM is where the theme
-  gets tuned. `nyx_hypr_effects` is a separate manual toggle.
-- **GPU branch** in `conf.d/env.conf`: nvidia / radeonsi / iHD.
+- **greetd + tuigreet.** Both from the repos. tuigreet runs
+  `--cmd start-hyprland`, bypassing session selection — which also sidesteps
+  ii's "do not select UWSM" warning.
+- **Portal preference is explicit.** ii installs the KDE portal alongside
+  Hyprland's and GTK's; without a stated preference the backend is chosen by
+  filename sort order and screenshare breaks non-deterministically.
+- **VM branch is functional only**: software GL in `hypr/custom/env.lua`, so
+  Hyprland can start at all under Hyper-V. Nothing cosmetic is disabled.
+- **GPU branch** in the same file: nvidia / radeonsi / iHD.
   `WLR_NO_HARDWARE_CURSORS` deliberately omitted — obsolete since 555.
 
-Verified: 13 templates render against all 4 profiles, waybar config parses as
-JSON, keybind collision check passes (53 binds, no duplicates). Verified on
-a real install: boots, reaches tuigreet, authenticates, and starts Hyprland.
-The desktop itself is still unstyled — no wallpaper, no dotfiles, branding
-stubbed.
+A pre-ii build booted, reached tuigreet, authenticated and started Hyprland.
+Nothing since has been run. See "Not yet verified" in NOTES.md before
+trusting this phase.
 
-Config syntax drift found on that first boot is written up in NOTES.md —
-`togglesplit` and `windowrulev2`.
-
-Still to do: a wallpaper — `nyx_hypr_wallpaper` is empty, and matugen has
-nothing to derive a colour scheme from without one. Shell config is ii's
-job now, so no dotfiles role is planned.
+Still to do: a wallpaper. `nyx_hypr_wallpaper` is empty and matugen has
+nothing to derive a scheme from without one.
 
 ## Phase 6 — gpu
 
@@ -103,11 +97,14 @@ Headers must match `nyx_kernel` or DKMS produces no module without erroring.
 Untestable in Hyper-V (no PCI GPU) — use `-e @profiles/...` or wait for
 hardware.
 
-## Phase 6b — theme
+## Phase 6b — theme  *(dropped)*
 
-Palette renders cleanly to shell/CSS/Hyprland/kitty/waybar. Remaining
-consumers are the ones that need a real theme package rather than a colour
-file: GTK, Kvantum, rEFInd, Plymouth.
+There is no theme role. illogical-impulse themes with matugen, deriving the
+scheme from the wallpaper at runtime, so `roles/theme`, `nyx_palette` and
+`nyx_roles` were removed rather than fought.
+
+What matugen does not reach still needs doing, and now needs doing ii's way:
+rEFInd and Plymouth. GTK and Qt are covered by ii's own theme packages.
 
 ## Phase 7 — branding
 

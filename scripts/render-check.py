@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """Render every role template against every profile and sanity-check output.
 
-Catches Jinja errors, invalid waybar JSON, and duplicate Hyprland keybinds
-without touching a VM. A template that fails here is a broken desktop.
+Catches Jinja errors without touching a VM. Since illogical-impulse took over
+the Hyprland and shell config, the templates left here are the small NyxOS
+overlay — env.lua, the Ozone flag files, greetd, portals — so this checks far
+less than it used to. It still catches the failure that matters: a template
+that raises during render leaves the machine without the file, and for
+env.lua that means no software GL and no session under Hyper-V.
 
     python3 scripts/render-check.py
 
@@ -53,17 +57,23 @@ def templates_in(tdir):
     )
 
 
-def check_keybinds(text):
-    seen, dupes = set(), []
-    for line in text.splitlines():
-        m = re.match(r"\s*bind[elm]*\s*=\s*([^,]*),\s*([^,]+),", line)
-        if not m:
+def check_lua(text):
+    """Cheap syntax screen for rendered Lua.
+
+    Not a parser. Catches the two ways a Jinja conditional mangles hl.env()
+    output: an unbalanced call, or a key rendered empty because a fact was
+    missing.
+    """
+    problems = []
+    for n, line in enumerate(text.splitlines(), 1):
+        line = line.strip()
+        if not line.startswith("hl."):
             continue
-        combo = (m.group(1).strip(), m.group(2).strip())
-        if combo in seen:
-            dupes.append(combo)
-        seen.add(combo)
-    return len(seen), dupes
+        if line.count("(") != line.count(")"):
+            problems.append(f"line {n}: unbalanced parens: {line}")
+        if re.search(r'\(\s*""', line) or re.search(r',\s*""\s*\)', line):
+            problems.append(f"line {n}: empty argument: {line}")
+    return problems
 
 
 def main():
@@ -84,14 +94,13 @@ def main():
     for role in roles:
         tdir = f"roles/{role}/templates"
         defaults = load_yaml(f"roles/{role}/defaults/main.yml")
-        theme = load_yaml("roles/theme/defaults/main.yml")
         env = build_env(tdir)
         names = templates_in(tdir)
         if not names:
             continue
 
         for pname, profile in profiles.items():
-            ctx = {**group_vars, **theme, **defaults, "nyx_profile": profile}
+            ctx = {**group_vars, **defaults, "nyx_profile": profile}
             for name in names:
                 try:
                     out = env.get_template(name).render(**ctx)
@@ -100,22 +109,9 @@ def main():
                     failures.append(f"{role}/{name} [{pname}]: {exc}")
                     continue
 
-                if name.endswith("config.jsonc.j2"):
-                    stripped = re.sub(r"^\s*//.*$", "", out, flags=re.M)
-                    try:
-                        json.loads(stripped)
-                    except json.JSONDecodeError as exc:
-                        failures.append(f"{role}/{name} [{pname}] bad JSON: {exc}")
-
-                if "keybinds" in name:
-                    count, dupes = check_keybinds(out)
-                    if dupes:
-                        failures.append(
-                            f"{role}/{name} [{pname}] duplicate binds: {dupes}"
-                        )
-
-                if "windowrulev2" in re.sub(r"^\s*#.*$", "", out, flags=re.M):
-                    failures.append(f"{role}/{name} [{pname}] uses deprecated windowrulev2")
+                if name.endswith(".lua.j2"):
+                    for problem in check_lua(out):
+                        failures.append(f"{role}/{name} [{pname}] {problem}")
 
         print(f"{role}: {len(names)} templates x {len(profiles)} profiles")
 

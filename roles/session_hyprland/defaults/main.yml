@@ -11,8 +11,9 @@
 # into the wrong repo would fail the run, and the list changes upstream.
 
 # --- upstream source ------------------------------------------------------
-# Pinned to a tag or commit rather than a branch: ii moves fast, and an
-# unpinned clone means the desktop changes under you on any re-run.
+# This tracks a branch, so every run can pull a different desktop: the role
+# re-runs ./setup install each play and ii moves fast. Pin to a tag or a
+# commit once the current state is one worth keeping.
 nyx_ii_repo: "https://github.com/end-4/dots-hyprland"
 nyx_ii_version: "main"
 # Upstream's default location. Matching it means the documented manual update
@@ -54,6 +55,10 @@ nyx_ii_overlay: true
 # matugen derives the whole scheme from this image, so unlike the old palette
 # setup it is required rather than optional. An empty value leaves ii on its
 # built-in default colours.
+#
+# Resolved by ansible.builtin.copy: a bare name comes from this role's
+# files/, an absolute path from the control machine — which is the target
+# too, since the playbook runs with -c local.
 nyx_hypr_wallpaper: ""
 
 # greetd is the login daemon, tuigreet the greeter. Both from the repos.
