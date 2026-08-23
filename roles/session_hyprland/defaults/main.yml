@@ -24,11 +24,19 @@ nyx_ii_checkout: "/home/{{ nyx_user }}/.cache/dots-hyprland"
 #
 # A full pacman -Syu is deliberately NOT skipped: ii installs packages built
 # against current libraries, and Arch has no supported partial-upgrade state.
-# Add -s / --skip-sysupdate here only if you accept that risk. Other useful
-# ones: --core (skip fish, fontconfig, plasma-browser-integration),
-# --skip-backup, --skip-hyprland-entry.
+#
+# --skip-fish skips ii's fish *config*, not the package — fish is a
+# dependency of illogical-impulse-fonts-themes and still gets installed.
+# nyx_shell stays zsh, and ii's zsh colourscheme drop-in is sourced from
+# .zshrc further down this role.
+#
+# Kept deliberately: fontconfig and plasma-browser-integration (fonts and
+# browser media integration), quickshell, the Hyprland config and its
+# session entry. --core would have dropped the first two, so it is not used.
 nyx_ii_setup_args:
   - "-f"
+  - "--skip-fish"
+  - "--skip-backup"
 
 # Notification daemons claim org.freedesktop.Notifications on the session bus.
 # Only one process can hold it, so anything left installed races Quickshell's

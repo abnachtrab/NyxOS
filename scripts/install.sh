@@ -16,6 +16,9 @@ set -euo pipefail
 DISK="${NYX_DISK:?set NYX_DISK explicitly, e.g. /dev/nvme0n1}"
 HOST="${NYX_HOST:-nyxos}"
 REPO="${NYX_REPO:-https://github.com/abnachtrab/NyxOS}"
+# Branch to provision from. Lets an unproven branch be installed on a
+# throwaway machine without merging it to main first.
+BRANCH="${NYX_BRANCH:-main}"
 KERNEL="${NYX_KERNEL:-linux-cachyos}"
 RECOVERY_GB="${NYX_RECOVERY_GB:-8}"
 TZ="${NYX_TZ:-America/Phoenix}"
@@ -59,7 +62,7 @@ if ! { exec 3< /dev/tty; } 2>/dev/null; then
 fi
 exec 3<&-
 
-echo "About to erase ${DISK}."
+echo "About to erase ${DISK}. Provisioning from ${REPO} (${BRANCH})."
 lsblk "$DISK"
 read -rp "type ERASE to continue: " confirm < /dev/tty
 [[ "$confirm" == "ERASE" ]] || exit 1
@@ -226,7 +229,7 @@ EOF
 echo "refind_linux.conf written for root=UUID=${ROOT_UUID} subvol=@"
 
 # --- provision ------------------------------------------------------------
-git clone "$REPO" /mnt/root/NyxOS
+git clone --branch "$BRANCH" "$REPO" /mnt/root/NyxOS
 
 # Defining nyx_password as an extra var makes Ansible skip its vars_prompt.
 install -m 600 /dev/null /mnt/root/.nyx-vars.yml
