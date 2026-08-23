@@ -80,9 +80,10 @@
     directory_mode: "0755"
   when: nyx_ii_overlay | bool
 
-# ii sources hypr/custom/ for user overrides, so NyxOS environment lands
-# there rather than fighting ii's own config. Rendered after the overlay so
-# GPU and VM branching is not something the overlay has to duplicate.
+# ii's config is Lua: hyprland.lua loads internal libraries, then its own
+# environment and defaults, then anything in custom/. Landing here means the
+# NyxOS values are applied last. The name is fixed by upstream — env.lua, not
+# env.conf; a hyprlang file here is silently never read.
 - name: Hyprland custom directory
   ansible.builtin.file:
     path: "/home/{{ nyx_user }}/.config/hypr/custom"
@@ -93,8 +94,8 @@
 
 - name: NyxOS environment
   ansible.builtin.template:
-    src: env.conf.j2
-    dest: "/home/{{ nyx_user }}/.config/hypr/custom/env.conf"
+    src: env.lua.j2
+    dest: "/home/{{ nyx_user }}/.config/hypr/custom/env.lua"
     owner: "{{ nyx_user }}"
     group: "{{ nyx_user }}"
     mode: "0644"

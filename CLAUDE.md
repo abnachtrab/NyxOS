@@ -27,12 +27,14 @@ Role gating lives in `site.yml`, not inside roles.
   disable blur, shadows, or animations: the VM is where the theme is tuned,
   so it has to look like the real thing. `nyx_hypr_effects` is the separate
   manual toggle.
-- **ii owns the Hyprland config.** Do not add templates that write
-  `~/.config/hypr/hyprland.conf` or its parts — `./setup install` rsyncs
-  them from upstream and would overwrite anything put there. NyxOS additions
-  go in `files/ii-overlay/` (copied after ii, so they win) or, for anything
-  needing profile branching, a template into `hypr/custom/` like
-  `env.conf.j2`.
+- **ii owns the Hyprland config, and it is Lua.** `hyprland.lua` loads
+  internal libraries, ii's environment and defaults, then `custom/`. Do not
+  write `hyprland.conf` or hyprlang parts — `./setup install` rsyncs
+  upstream's over them, and a `.conf` file in `custom/` is silently never
+  read. NyxOS additions go in `files/ii-overlay/` (copied after ii, so they
+  win) or, when they need profile branching, a template rendered into
+  `custom/` like `env.lua.j2`. Filenames there are upstream's: `env.lua`,
+  `general.lua`.
 - Prose in docs and comments is plain and factual. No taglines, no
   editorialising, no second-person asides.
 
