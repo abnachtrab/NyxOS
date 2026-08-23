@@ -19,16 +19,20 @@ Role gating lives in `site.yml`, not inside roles.
 
 ## Conventions
 
-- **No hex colours outside `roles/theme/defaults/main.yml`.** Templates read
-  `nyx_palette.<name>` and `nyx_roles.<role>`; roles consume role names, not
-  colour names, so reassigning primary is one line.
+- **Colour is matugen's, not ours.** illogical-impulse derives the whole
+  scheme from the wallpaper at runtime. `roles/theme`, `nyx_palette` and
+  `nyx_roles` were removed; there is no fixed NyxOS palette any more. Set
+  `nyx_hypr_wallpaper` and let matugen follow it.
 - **`is_vm` gates functional things only** — software GL, sshd. It must NOT
   disable blur, shadows, or animations: the VM is where the theme is tuned,
   so it has to look like the real thing. `nyx_hypr_effects` is the separate
   manual toggle.
-- Adding a Hyprland `conf.d` part: drop `templates/conf.d/<name>.conf.j2`
-  and add `<name>` to `nyx_hypr_conf_parts`. The render loop and the
-  `source =` lines both read that list.
+- **ii owns the Hyprland config.** Do not add templates that write
+  `~/.config/hypr/hyprland.conf` or its parts — `./setup install` rsyncs
+  them from upstream and would overwrite anything put there. NyxOS additions
+  go in `files/ii-overlay/` (copied after ii, so they win) or, for anything
+  needing profile branching, a template into `hypr/custom/` like
+  `env.conf.j2`.
 - Prose in docs and comments is plain and factual. No taglines, no
   editorialising, no second-person asides.
 

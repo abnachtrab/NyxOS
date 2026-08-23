@@ -1,56 +1,55 @@
 ---
-nyx_hypr_packages_core:
-  - hyprland
-  - hyprpolkitagent
-  - hyprlock
-  - hypridle
-  - hyprpaper
-  - hyprcursor
-  # Both portals are required. -hyprland handles screencopy and window
-  # picking; -gtk handles file chooser, settings, and print. Installing only
-  # one silently breaks whichever the other owns.
-  - xdg-desktop-portal
-  - xdg-desktop-portal-hyprland
-  - xdg-desktop-portal-gtk
+# illogical-impulse (end-4/dots-hyprland) provides the shell: bar,
+# notifications, launcher overlay, OSD, session menu, and the Hyprland config
+# set. It is Quickshell/QML underneath, and it themes with matugen — colours
+# are derived from the wallpaper at runtime, not from a fixed palette.
+# roles/theme was removed for that reason.
+#
+# Package installation is ii's own job. `./setup install` resolves the
+# illogical-impulse-* meta-packages itself and is documented as idempotent, so
+# this role does not carry a hand-transcribed package list — a package sorted
+# into the wrong repo would fail the run, and the list changes upstream.
 
-nyx_hypr_packages_shell:
-  - waybar
-  - fuzzel
+# --- upstream source ------------------------------------------------------
+# Pinned to a tag or commit rather than a branch: ii moves fast, and an
+# unpinned clone means the desktop changes under you on any re-run.
+nyx_ii_repo: "https://github.com/end-4/dots-hyprland"
+nyx_ii_version: "main"
+# Upstream's default location. Matching it means the documented manual update
+# (git stash, git pull, ./setup install) works without a path argument.
+nyx_ii_checkout: "/home/{{ nyx_user }}/.cache/dots-hyprland"
+
+# Notification daemons claim org.freedesktop.Notifications on the session bus.
+# Only one process can hold it, so anything left installed races Quickshell's
+# implementation and the loser silently shows nothing.
+nyx_ii_conflicting_daemons:
   - swaync
-  - cliphist
-  - wl-clipboard
-  - grim
-  - slurp
-  - wlogout
+  - dunst
+  - mako
 
-nyx_hypr_packages_support:
-  - qt5-wayland
-  - qt6-wayland
-  - polkit
-  - pipewire
-  - wireplumber
-  - xdg-user-dirs
-  - playerctl
-  - pamixer
+# ii's packages are a pacman group. Without this an upgrade pulls them from
+# the AUR-built versions and conflicts; upstream declines to edit pacman.conf
+# automatically, but roles/base already manages NoUpgrade in the same file.
+nyx_ii_ignore_group: true
+
+# Tweaks layered over ii's config after it is applied, so they win. Anything
+# under files/ii-overlay/ is copied into ~/.config with the same tree shape.
+nyx_ii_overlay: true
+
+# matugen derives the whole scheme from this image, so unlike the old palette
+# setup it is required rather than optional. An empty value leaves ii on its
+# built-in default colours.
+nyx_hypr_wallpaper: ""
 
 # greetd is the login daemon, tuigreet the greeter. Both from the repos.
 nyx_hypr_dm_packages:
   - greetd
   - greetd-tuigreet
 
-# Applications. spotify-launcher is the official-repo wrapper: it fetches and
-# runs the upstream client rather than repackaging it, so it stays out of the
-# AUR. Its config sets the Ozone flags — ELECTRON_OZONE_PLATFORM_HINT in
-# conf.d/env.conf does not cover Spotify, which is CEF rather than Electron.
-nyx_hypr_packages_apps:
-  - spotify-launcher
-
 # Chromium and Electron do not pick Wayland on their own.
-# ELECTRON_OZONE_PLATFORM_HINT in conf.d/env.conf covers Electron 28 and
-# newer; these files cover older builds and Chromium itself, which ignores
-# the hint entirely. Arch's launcher wrappers read
-# ~/.config/<name>-flags.conf, so add a name here when the matching package
-# lands — chromium, brave, code. VSCode is known not to honour its file.
+# ELECTRON_OZONE_PLATFORM_HINT covers Electron 28 and newer; these files cover
+# older builds and Chromium itself. Arch's launcher wrappers read
+# ~/.config/<name>-flags.conf. VSCode is known not to honour its file.
 nyx_hypr_ozone_flags:
   - "--enable-features=UseOzonePlatform"
   - "--ozone-platform=wayland"
@@ -58,30 +57,5 @@ nyx_hypr_ozone_flags:
 nyx_hypr_flag_files:
   - electron
 
-nyx_hypr_terminal: kitty
-nyx_hypr_filemanager: nautilus
-nyx_hypr_modkey: SUPER
-
-# Per-host monitor lines. Nothing generic is correct here, so the default is
-# Hyprland's own autodetect. Override in host_vars.
-nyx_hypr_monitors:
-  - ",preferred,auto,1"
-
-nyx_hypr_conf_parts:
-  - monitors
-  - env
-  - autostart
-  - keybinds
-  - rules
-
-# Empty renders a solid base colour. Point this at a real file once
-# roles/branding ships one; a missing path makes hyprlock fail to draw a
-# background rather than falling back.
-nyx_hypr_wallpaper: ""
-# Visual effects are NOT tied to is_vm. The VM is a design surface: blur and
-# animations must render there or they cannot be tuned. Set false only if
-# software rendering becomes too slow to work in.
-nyx_hypr_effects: true
-
-nyx_hypr_idle_lock_secs: 300
-nyx_hypr_idle_dpms_secs: 600
+nyx_hypr_packages_apps:
+  - spotify-launcher

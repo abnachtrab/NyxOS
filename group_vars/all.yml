@@ -7,9 +7,6 @@ nyx_id:          "nyxos"
 nyx_user:        "abnac"
 nyx_user_groups: [wheel, video, audio, input, storage]
 nyx_url:         "https://github.com/abnachtrab/NyxOS"
-# Palette lives in roles/theme/defaults/main.yml. Nothing else
-# hardcodes a hex value.
-nyx_accent:      "#C7B8E8"          # haze, primary
 
 # ---------------------------------------------------------------------------
 # Kernel / packages / shell
@@ -17,6 +14,8 @@ nyx_accent:      "#C7B8E8"          # haze, primary
 nyx_kernel:         "linux-cachyos"
 nyx_kernel_headers: "{{ nyx_kernel }}-headers"
 nyx_aur_helper:     "yay"
+# illogical-impulse ships fish config and a starship prompt. zsh stays the
+# login shell; nothing in ii requires fish to be the default.
 nyx_shell: /usr/bin/zsh
 
 # English (US) UI, qwerty. Glyph coverage for other scripts comes from the

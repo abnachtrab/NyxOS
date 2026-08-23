@@ -1,76 +1,124 @@
 ---
-- name: Hyprland packages
+# Installs illogical-impulse and layers NyxOS tweaks over it. ii owns the
+# Hyprland config set, the Quickshell shell, and — through matugen — the
+# colour scheme. This role owns package selection, the checkout, the overlay,
+# and login.
+
+- name: Login packages
   community.general.pacman:
-    name: "{{ nyx_hypr_packages_core
-              + nyx_hypr_packages_shell
-              + nyx_hypr_packages_support
-              + nyx_hypr_dm_packages
-              + nyx_hypr_packages_apps
-              + [nyx_hypr_terminal] }}"
+    name: "{{ nyx_hypr_dm_packages + nyx_hypr_packages_apps }}"
     state: present
 
-- name: Config directories
+# Only one process can own org.freedesktop.Notifications. Anything left
+# installed races Quickshell's implementation and the loser shows nothing,
+# with no error anywhere.
+- name: Remove conflicting notification daemons
+  community.general.pacman:
+    name: "{{ nyx_ii_conflicting_daemons }}"
+    state: absent
+
+# Upstream declines to edit pacman.conf automatically, calling it risky.
+# roles/base already manages NoUpgrade in this file, so the precedent exists.
+- name: Skip the illogical-impulse group on upgrade
+  ansible.builtin.lineinfile:
+    path: /etc/pacman.conf
+    regexp: '^IgnoreGroup\s*='
+    line: "IgnoreGroup = illogical-impulse"
+    insertafter: '^\[options\]'
+  when: nyx_ii_ignore_group | bool
+
+# --- illogical-impulse ----------------------------------------------------
+- name: Fetch illogical-impulse
+  ansible.builtin.git:
+    repo: "{{ nyx_ii_repo }}"
+    dest: "{{ nyx_ii_checkout }}"
+    version: "{{ nyx_ii_version }}"
+  become: true
+  become_user: "{{ nyx_user }}"
+  register: nyx_ii_clone
+
+# ./setup install runs as the user and calls sudo pacman, which would sit
+# waiting for a password. Same temporary grant roles/base uses for makepkg,
+# revoked immediately after.
+- name: Temporary passwordless pacman for the ii installer
+  ansible.builtin.copy:
+    content: "{{ nyx_user }} ALL=(ALL) NOPASSWD: /usr/bin/pacman\n"
+    dest: /etc/sudoers.d/99-nyx-ii-temp
+    mode: "0440"
+    validate: "visudo -cf %s"
+
+- name: Run the ii installer
+  block:
+    # Installs the illogical-impulse-* meta-packages and rsyncs dots/.config
+    # into place. Documented as idempotent, so this runs on every play; if it
+    # ever turns interactive it will hang here rather than fail, since stdin
+    # is closed.
+    - name: setup install
+      ansible.builtin.command:
+        cmd: ./setup install
+        chdir: "{{ nyx_ii_checkout }}"
+      become: true
+      become_user: "{{ nyx_user }}"
+      register: nyx_ii_setup
+      changed_when: nyx_ii_clone.changed
+  always:
+    - name: Revoke temporary passwordless pacman
+      ansible.builtin.file:
+        path: /etc/sudoers.d/99-nyx-ii-temp
+        state: absent
+
+# --- NyxOS tweaks ---------------------------------------------------------
+# Copied after ii, so anything here wins. Mirror the ~/.config tree shape
+# under files/ii-overlay/ — e.g. files/ii-overlay/hypr/custom/keybinds.conf.
+- name: NyxOS overlay
+  ansible.builtin.copy:
+    src: ii-overlay/
+    dest: "/home/{{ nyx_user }}/.config/"
+    owner: "{{ nyx_user }}"
+    group: "{{ nyx_user }}"
+    mode: "0644"
+    directory_mode: "0755"
+  when: nyx_ii_overlay | bool
+
+# ii sources hypr/custom/ for user overrides, so NyxOS environment lands
+# there rather than fighting ii's own config. Rendered after the overlay so
+# GPU and VM branching is not something the overlay has to duplicate.
+- name: Hyprland custom directory
   ansible.builtin.file:
-    path: "/home/{{ nyx_user }}/{{ item }}"
+    path: "/home/{{ nyx_user }}/.config/hypr/custom"
     state: directory
     owner: "{{ nyx_user }}"
     group: "{{ nyx_user }}"
     mode: "0755"
-  loop:
-    - .config/hypr
-    - .config/hypr/conf.d
-    - .config/waybar
-    - .config/xdg-desktop-portal
-    - .config/swaync
 
-# roles/theme owns conf.d/theme.conf; this role owns everything else there.
-- name: Hyprland entrypoint
+- name: NyxOS environment
   ansible.builtin.template:
-    src: hyprland.conf.j2
-    dest: "/home/{{ nyx_user }}/.config/hypr/hyprland.conf"
+    src: env.conf.j2
+    dest: "/home/{{ nyx_user }}/.config/hypr/custom/env.conf"
     owner: "{{ nyx_user }}"
     group: "{{ nyx_user }}"
     mode: "0644"
 
-- name: Hyprland config parts
-  ansible.builtin.template:
-    src: "conf.d/{{ item }}.conf.j2"
-    dest: "/home/{{ nyx_user }}/.config/hypr/conf.d/{{ item }}.conf"
+# --- wallpaper ------------------------------------------------------------
+# matugen derives the entire scheme from this image. Without it ii falls back
+# to its built-in colours, so this is now load-bearing rather than cosmetic.
+- name: Wallpaper
+  ansible.builtin.copy:
+    src: "{{ nyx_hypr_wallpaper }}"
+    dest: "/home/{{ nyx_user }}/.config/background"
     owner: "{{ nyx_user }}"
     group: "{{ nyx_user }}"
     mode: "0644"
-  loop: "{{ nyx_hypr_conf_parts }}"
+  when: nyx_hypr_wallpaper | length > 0
 
-- name: hyprlock / hyprpaper / hypridle
-  ansible.builtin.template:
-    src: "{{ item }}.conf.j2"
-    dest: "/home/{{ nyx_user }}/.config/hypr/{{ item }}.conf"
-    owner: "{{ nyx_user }}"
-    group: "{{ nyx_user }}"
-    mode: "0644"
-  loop: [hyprlock, hyprpaper, hypridle]
+- name: Warn when no wallpaper is set
+  ansible.builtin.debug:
+    msg: >-
+      nyx_hypr_wallpaper is empty, so matugen has nothing to derive a scheme
+      from and ii keeps its built-in colours. Set it to a real image.
+  when: nyx_hypr_wallpaper | length == 0
 
-# Without an explicit preference the portal backend is chosen by whichever
-# .portal file sorts first, which breaks screenshare non-deterministically.
-- name: Portal backend preference
-  ansible.builtin.template:
-    src: hyprland-portals.conf.j2
-    dest: "/home/{{ nyx_user }}/.config/xdg-desktop-portal/hyprland-portals.conf"
-    owner: "{{ nyx_user }}"
-    group: "{{ nyx_user }}"
-    mode: "0644"
-
-- name: Waybar
-  ansible.builtin.template:
-    src: "waybar/{{ item }}.j2"
-    dest: "/home/{{ nyx_user }}/.config/waybar/{{ item }}"
-    owner: "{{ nyx_user }}"
-    group: "{{ nyx_user }}"
-    mode: "0644"
-  loop:
-    - config.jsonc
-    - style.css
-
+# --- application config ---------------------------------------------------
 - name: Ozone flag files
   ansible.builtin.template:
     src: flags.conf.j2
@@ -88,6 +136,38 @@
     group: "{{ nyx_user }}"
     mode: "0644"
   when: "'spotify-launcher' in nyx_hypr_packages_apps"
+
+# Without an explicit preference the portal backend is chosen by whichever
+# .portal file sorts first, which breaks screenshare non-deterministically.
+# ii installs the KDE portal alongside the Hyprland and GTK ones, so this
+# matters more here than it did before.
+- name: Portal backend preference
+  ansible.builtin.file:
+    path: "/home/{{ nyx_user }}/.config/xdg-desktop-portal"
+    state: directory
+    owner: "{{ nyx_user }}"
+    group: "{{ nyx_user }}"
+    mode: "0755"
+
+- name: Portal backend config
+  ansible.builtin.template:
+    src: hyprland-portals.conf.j2
+    dest: "/home/{{ nyx_user }}/.config/xdg-desktop-portal/hyprland-portals.conf"
+    owner: "{{ nyx_user }}"
+    group: "{{ nyx_user }}"
+    mode: "0644"
+
+# ii ships a zsh colourscheme drop-in. nyx_shell is zsh, so wire it up;
+# there is no dotfiles role to own ~/.zshrc yet.
+- name: ii colourscheme in zshrc
+  ansible.builtin.lineinfile:
+    path: "/home/{{ nyx_user }}/.zshrc"
+    line: "source ~/.config/zshrc.d/dots-hyprland.zsh"
+    create: true
+    owner: "{{ nyx_user }}"
+    group: "{{ nyx_user }}"
+    mode: "0644"
+  when: nyx_shell | basename == 'zsh'
 
 - name: Session desktop entry
   ansible.builtin.copy:
@@ -113,11 +193,3 @@
   ansible.builtin.systemd_service:
     name: greetd
     enabled: true
-
-- name: Report software rendering
-  ansible.builtin.debug:
-    msg: >-
-      VM detected: software GL enabled so Hyprland can start. Visual effects
-      are unchanged (nyx_hypr_effects={{ nyx_hypr_effects }}) — this is a
-      design surface, so it should look like the real thing.
-  when: nyx_profile.is_vm | bool

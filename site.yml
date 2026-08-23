@@ -33,9 +33,6 @@
       tags: [gpu]
 
     # ---- userland --------------------------------------------------------
-    - role: theme
-      tags: [theme]
-
     - role: session_hyprland
       tags: [session, hyprland]
 
