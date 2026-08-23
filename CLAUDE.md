@@ -73,10 +73,9 @@ looks for duplicate keybinds. Two real collisions were caught this way.
   needs porting to the Lua format. **Adam is doing this himself** — do not
   start it unasked.
 - greetd runs tuigreet, `nyx_packages_aur` is empty, and there is no
-  greeter switch. Both launch paths call `Hyprland` directly, which warns
-  about not being started through a session manager. No run has been
-  observed reaching a session under this config — verify it before trusting
-  the session role.
+  greeter switch. Both launch paths call `start-hyprland`, owned by the
+  `hyprland` package. Verified on a real install: boots, greets,
+  authenticates, and starts Hyprland.
 - No dotfiles role yet, so zsh prompts `zsh-newuser-install` on first login.
 - `nyx_hypr_wallpaper` is empty on purpose. A path to a nonexistent file
   makes hyprlock fail to draw a background rather than falling back, so do

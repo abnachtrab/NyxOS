@@ -76,9 +76,10 @@ profile; keybinds and rules are static.
   `WLR_NO_HARDWARE_CURSORS` deliberately omitted — obsolete since 555.
 
 Verified: 13 templates render against all 4 profiles, waybar config parses as
-JSON, keybind collision check passes (53 binds, no duplicates). An earlier
-build booted to a greeter, authenticated, and started Hyprland with waybar
-under llvmpipe, but the login path has changed since and needs re-verifying.
+JSON, keybind collision check passes (53 binds, no duplicates). Verified on
+a real install: boots, reaches tuigreet, authenticates, and starts Hyprland.
+The desktop itself is still unstyled — no wallpaper, no dotfiles, branding
+stubbed.
 
 Config syntax drift found on that first boot is written up in NOTES.md —
 `togglesplit` and `windowrulev2`.

@@ -52,13 +52,9 @@ sections below this one record things that were actually run.
 - Ansible warns that `/home/<user>/.ansible/tmp` was created 0700. Benign
   when become_user owns it; breaks if the playbook runs as root against a
   different `nyx_user`.
-- **Confirm the session still launches.** Both launch paths call `Hyprland`
-  directly, which logs a warning about not being started through a session
-  manager. No run has been observed reaching a session under the current
-  config, so verify a login on the next clean revert. `uwsm start hyprland`
-  is the warning-free alternative, but uwsm expects environment in its own
-  files rather than the compositor config, so `conf.d/env.conf` — including
-  the `is_vm` software-GL block — would need reworking first.
+- `nyx_hypr_wallpaper` is still empty and there is no dotfiles role, so a
+  fresh session has no wallpaper and zsh prompts `zsh-newuser-install` on
+  the first terminal.
 
 ## Theme
 
@@ -188,9 +184,13 @@ Four config errors on the first real session, all fixed:
   `bind = $mod, S, layoutmsg, togglesplit`.
 - `windowrulev2` was merged back into `windowrule` and now warns as
   deprecated. Same argument syntax.
-- Hyprland warns when started as a bare binary rather than through a
-  session manager. Both launch paths accept the warning for now; the
-  alternative is uwsm, which changes where environment is set.
+- The session must launch via `start-hyprland`, not the bare `Hyprland`
+  binary, which warns about not being started through a session manager.
+  `/usr/bin/start-hyprland` is owned by the `hyprland` package, so it is
+  always present — it was briefly assumed to come from hyprlogin-git and
+  both launch paths were switched to the bare binary; `pacman -Qo` on a real
+  install disproved that. Set in `files/hyprland.desktop` and the tuigreet
+  `--cmd`.
 - Hyprland warns that `.conf` support is removed in 0.57. Not addressed;
   the whole config set will need porting before that release.
 
