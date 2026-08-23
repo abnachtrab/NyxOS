@@ -355,3 +355,45 @@ Three mechanisms, because none of them covers everything.
 
 An unused flags file is harmless, unlike `nyx_hypr_wallpaper`: nothing reads
 it until the corresponding wrapper exists.
+
+## illogical-impulse
+
+`./setup install` **prompts by default.** With stdin closed, as it is under
+Ansible, that is a hang rather than a failure — the play sits there. `-f`
+(`--force`, "force mode without any confirm") is the unattended path and is
+what `nyx_ii_setup_args` carries.
+
+Other flags worth knowing, from `sdata/subcmd-install/options.sh`:
+`--core` (skip fish, fontconfig, plasma-browser-integration),
+`--skip-backup`, `--skip-quickshell`, `--skip-hyprland`,
+`--skip-hyprland-entry`, `-s/--skip-sysupdate`, `-c/--clean`.
+
+`-s` is deliberately not used. ii installs packages built against current
+libraries and Arch has no supported partial-upgrade state, so skipping the
+system upgrade trades a slow run for a broken one.
+
+The installer runs `sudo_init_keepalive` and does more than pacman — it sets
+up permissions and services too. The temporary sudoers grant is therefore
+`NOPASSWD: ALL` rather than the pacman-only grant `roles/base` uses for
+makepkg. It is revoked in an `always:` block, so a failed install still
+gives it back.
+
+**The config format is Lua.** `hyprland.lua` loads internal libraries, then
+ii's environment and defaults, then `custom/`. NyxOS environment goes in
+`custom/env.lua` as `hl.env()` calls. A hyprlang `.conf` file in `custom/`
+is silently never read — which cost one commit, since the file that failed
+to load was the one carrying the VM software-GL block.
+
+Upstream's own post-install notes, all handled in the role: remove
+conflicting notification daemons, add `IgnoreGroup = illogical-impulse` to
+pacman.conf, source `~/.config/zshrc.d/dots-hyprland.zsh` from `.zshrc`.
+
+**Do not select UWSM** when picking a session at the greeter. ii says so
+explicitly; using it does not break the dotfiles but pulls in autostarted
+junk from other desktop environments, such as duplicate authentication
+dialogs. greetd runs tuigreet with `--cmd start-hyprland`, which bypasses
+session selection entirely, so this only matters if the greeter changes.
+
+Updating is manual and documented upstream: `git stash`, `git pull`,
+`./setup install` again. The role re-runs the installer every play, so a
+pinned `nyx_ii_version` is what keeps the desktop from moving underfoot.

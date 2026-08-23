@@ -19,6 +19,17 @@ nyx_ii_version: "main"
 # (git stash, git pull, ./setup install) works without a path argument.
 nyx_ii_checkout: "/home/{{ nyx_user }}/.cache/dots-hyprland"
 
+# ./setup install prompts by default, which would hang a play with stdin
+# closed. -f is upstream's "force mode without any confirm".
+#
+# A full pacman -Syu is deliberately NOT skipped: ii installs packages built
+# against current libraries, and Arch has no supported partial-upgrade state.
+# Add -s / --skip-sysupdate here only if you accept that risk. Other useful
+# ones: --core (skip fish, fontconfig, plasma-browser-integration),
+# --skip-backup, --skip-hyprland-entry.
+nyx_ii_setup_args:
+  - "-f"
+
 # Notification daemons claim org.freedesktop.Notifications on the session bus.
 # Only one process can hold it, so anything left installed races Quickshell's
 # implementation and the loser silently shows nothing.

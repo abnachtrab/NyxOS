@@ -37,32 +37,36 @@
   become_user: "{{ nyx_user }}"
   register: nyx_ii_clone
 
-# ./setup install runs as the user and calls sudo pacman, which would sit
-# waiting for a password. Same temporary grant roles/base uses for makepkg,
-# revoked immediately after.
-- name: Temporary passwordless pacman for the ii installer
+# ./setup install calls sudo_init_keepalive and needs more than pacman: it
+# also sets up permissions and services. Wider than the makepkg grant in
+# roles/base for that reason, and revoked in the always: block whether the
+# installer succeeds or not.
+- name: Temporary passwordless sudo for the ii installer
   ansible.builtin.copy:
-    content: "{{ nyx_user }} ALL=(ALL) NOPASSWD: /usr/bin/pacman\n"
+    content: "{{ nyx_user }} ALL=(ALL) NOPASSWD: ALL\n"
     dest: /etc/sudoers.d/99-nyx-ii-temp
     mode: "0440"
     validate: "visudo -cf %s"
 
 - name: Run the ii installer
   block:
-    # Installs the illogical-impulse-* meta-packages and rsyncs dots/.config
-    # into place. Documented as idempotent, so this runs on every play; if it
-    # ever turns interactive it will hang here rather than fail, since stdin
-    # is closed.
+    # Installs the illogical-impulse-* meta-packages and copies the config
+    # tree. Prompts without -f, and with stdin closed that is a hang rather
+    # than a failure — see nyx_ii_setup_args.
+    #
+    # changed_when tracks the checkout moving, which is an approximation:
+    # the installer can do work when upstream has not changed, and this
+    # reports ok in that case.
     - name: setup install
       ansible.builtin.command:
-        cmd: ./setup install
+        argv: "{{ ['./setup', 'install'] + nyx_ii_setup_args }}"
         chdir: "{{ nyx_ii_checkout }}"
       become: true
       become_user: "{{ nyx_user }}"
       register: nyx_ii_setup
       changed_when: nyx_ii_clone.changed
   always:
-    - name: Revoke temporary passwordless pacman
+    - name: Revoke temporary passwordless sudo
       ansible.builtin.file:
         path: /etc/sudoers.d/99-nyx-ii-temp
         state: absent
