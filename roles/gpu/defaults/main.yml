@@ -10,6 +10,10 @@ nyx_nvidia_packages:
   - nvidia-utils
   - lib32-nvidia-utils
   - egl-wayland
+  # VA-API bridge to NVDEC. conf.d/env.conf sets LIBVA_DRIVER_NAME=nvidia,
+  # which resolves to nothing without this — hardware video decode then falls
+  # back to software with no error.
+  - libva-nvidia-driver
 
 # Early KMS. i915 is prepended when an Intel iGPU is also present: on hybrid
 # systems, loading the NVIDIA modules first stalls Electron and Chromium apps

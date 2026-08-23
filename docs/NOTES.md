@@ -303,8 +303,11 @@ an equality test would not.
 From the Hyprland docs, implemented in `roles/gpu`:
 
 - **Userspace**: `nvidia-open-dkms`, `nvidia-utils`, `lib32-nvidia-utils`,
-  `egl-wayland`, in `nyx_nvidia_packages`. chwd still runs and still owns
-  driver selection for everything else, but it does not guarantee this set.
+  `egl-wayland`, `libva-nvidia-driver`, in `nyx_nvidia_packages`. chwd still
+  runs and still owns driver selection for everything else, but it does not
+  guarantee this set. `libva-nvidia-driver` is what makes the
+  `LIBVA_DRIVER_NAME=nvidia` already set in `conf.d/env.conf` resolve to
+  anything; without it VA-API decode silently falls back to software.
   `lib32-*` needs `[multilib]`; the role asserts it rather than enabling it,
   matching how `roles/base` treats the CachyOS sections.
 - **`/etc/modprobe.d/nvidia.conf`** — `options nvidia_drm modeset=1`.
