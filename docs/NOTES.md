@@ -16,6 +16,9 @@ sections below this one record things that were actually run.
   `hyperv_fb` on older. The `video=` cmdline param differs.
 - **nvidia-open vs proprietary cutoff.** Turing and newer for open modules;
   recent driver branches dropped Maxwell/Pascal/Volta entirely.
+  `nyx_nvidia_packages` names `nvidia-open-dkms` outright, so a pre-Turing
+  card needs that list overridden — chwd would pick a legacy branch and
+  pacman will not hold both.
 - **Intel media driver split.** `intel-media-driver` for Gen8+,
   `libva-intel-driver` below. `i915` vs `xe` on the newest parts.
 
@@ -165,7 +168,8 @@ Desktop branching that remains:
   below.
 
 Override profiles: `hyperv`, `intel-desktop-v3`, `amd-desktop-v4`,
-`nvidia-desktop-v4`.
+`nvidia-desktop-v4`, `nvidia-intel-desktop-v4` (hybrid, for the i915
+ordering path).
 
 ## Wallpaper
 
@@ -293,3 +297,38 @@ install completed anyway.
 Sources are matched by prefix against `findmnt -rno TARGET,SOURCE`, which
 prints btrfs sources as `/dev/sda3[/@home]` — the prefix test handles that,
 an equality test would not.
+
+## NVIDIA requirements
+
+From the Hyprland docs, implemented in `roles/gpu`:
+
+- **Userspace**: `nvidia-open-dkms`, `nvidia-utils`, `lib32-nvidia-utils`,
+  `egl-wayland`, in `nyx_nvidia_packages`. chwd still runs and still owns
+  driver selection for everything else, but it does not guarantee this set.
+  `lib32-*` needs `[multilib]`; the role asserts it rather than enabling it,
+  matching how `roles/base` treats the CachyOS sections.
+- **`/etc/modprobe.d/nvidia.conf`** — `options nvidia_drm modeset=1`.
+- **Early KMS** — `nvidia nvidia_modeset nvidia_uvm nvidia_drm` in
+  mkinitcpio's `MODULES`.
+
+`i915` is prepended when the profile also lists an Intel GPU: on hybrid
+systems, loading the NVIDIA modules first makes Electron and Chromium apps
+stall for up to a minute after boot. `profiles/nvidia-intel-desktop-v4.json`
+exists to exercise that branch.
+
+Early KMS can break resume from hibernation — the machine boots instead of
+resuming. Drop the modules if that appears.
+
+Verify after a reboot:
+
+    cat /sys/module/nvidia_drm/parameters/modeset    # expect Y
+
+The role reports this rather than asserting it, because the value is not
+readable until the machine has booted with the new initramfs.
+
+**`/etc/kernel/cmdline` is currently inert.** `roles/gpu` writes
+`nvidia_drm.modeset=1` there, but nothing reads it: `install.sh` writes
+`refind_linux.conf` directly, and the UKI that would consume a preset
+cmdline is Phase 10. The modprobe.d file is what actually takes effect
+today. Left in place because Phase 10 needs it, but do not count it as the
+mechanism.

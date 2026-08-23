@@ -1,4 +1,22 @@
 ---
+# Userspace the compositor needs, on top of whatever driver profile chwd
+# selects. nvidia-open-dkms covers Turing and newer; chwd picks a legacy
+# branch (nvidia-dkms-580xx, -470xx) on older parts, and pacman will not hold
+# that and nvidia-open-dkms at once. Override this list for a pre-Turing card.
+# lib32-nvidia-utils needs [multilib]; the role asserts it rather than
+# enabling it.
+nyx_nvidia_packages:
+  - nvidia-open-dkms
+  - nvidia-utils
+  - lib32-nvidia-utils
+  - egl-wayland
+
+# Early KMS. i915 is prepended when an Intel iGPU is also present: on hybrid
+# systems, loading the NVIDIA modules first stalls Electron and Chromium apps
+# for up to a minute after boot.
+#
+# Early KMS can also break resume from hibernation — the machine boots instead
+# of resuming. Drop these modules if that shows up.
 nyx_nvidia_kms_modules:
   - nvidia
   - nvidia_modeset

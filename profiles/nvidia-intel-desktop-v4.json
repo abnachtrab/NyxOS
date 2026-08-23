@@ -1,0 +1,15 @@
+{
+  "nyx_profile": {
+    "cpu": "intel",
+    "gpus": [
+      "nvidia",
+      "intel"
+    ],
+    "march": "x86-64-v4",
+    "virt": "NA",
+    "is_vm": false,
+    "has_tpm": true,
+    "secureboot": true,
+    "hostname": "nyx-desktop"
+  }
+}

@@ -91,8 +91,13 @@ points at a file that does not exist yet.
 ## Phase 6 — gpu
 
 Collapsed from three roles into one. `chwd -a` picks the driver profile; the
-role only adds early KMS modules and `nvidia_drm.modeset=1`, and
+role adds the userspace Hyprland needs (`nyx_nvidia_packages`), early KMS
+modules, `/etc/modprobe.d/nvidia.conf`, and the cmdline flag.
 `roles/session_hyprland` writes the compositor env vars.
+
+`i915` goes first in `MODULES` on hybrid Intel+NVIDIA, or Electron apps
+stall after boot. `lib32-nvidia-utils` requires `[multilib]`, which the role
+asserts. See docs/NOTES.md for the full list and the hibernation caveat.
 
 Headers must match `nyx_kernel` or DKMS produces no module without erroring.
 Untestable in Hyper-V (no PCI GPU) — use `-e @profiles/...` or wait for
