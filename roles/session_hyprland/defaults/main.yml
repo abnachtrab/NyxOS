@@ -38,6 +38,13 @@ nyx_hypr_dm_packages:
   - greetd
   - greetd-tuigreet
 
+# Applications. spotify-launcher is the official-repo wrapper: it fetches and
+# runs the upstream client rather than repackaging it, so it stays out of the
+# AUR. Its config sets the Ozone flags — ELECTRON_OZONE_PLATFORM_HINT in
+# conf.d/env.conf does not cover Spotify, which is CEF rather than Electron.
+nyx_hypr_packages_apps:
+  - spotify-launcher
+
 nyx_hypr_terminal: kitty
 nyx_hypr_filemanager: nautilus
 nyx_hypr_modkey: SUPER

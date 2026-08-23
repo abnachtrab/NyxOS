@@ -5,6 +5,7 @@
               + nyx_hypr_packages_shell
               + nyx_hypr_packages_support
               + nyx_hypr_dm_packages
+              + nyx_hypr_packages_apps
               + [nyx_hypr_terminal] }}"
     state: present
 
@@ -69,6 +70,15 @@
   loop:
     - config.jsonc
     - style.css
+
+- name: Spotify on Wayland
+  ansible.builtin.copy:
+    src: spotify-launcher.conf
+    dest: "/home/{{ nyx_user }}/.config/spotify-launcher.conf"
+    owner: "{{ nyx_user }}"
+    group: "{{ nyx_user }}"
+    mode: "0644"
+  when: "'spotify-launcher' in nyx_hypr_packages_apps"
 
 - name: Session desktop entry
   ansible.builtin.copy:
