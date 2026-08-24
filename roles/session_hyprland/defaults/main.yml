@@ -105,3 +105,12 @@ nyx_hypr_flag_files:
 
 nyx_hypr_packages_apps:
   - spotify-launcher
+  # extra/code is Code - OSS, the open-source build: Open VSX instead of the
+  # Microsoft marketplace, and none of the proprietary add-ons. The
+  # MS-branded build is visual-studio-code-bin in the AUR, which this repo
+  # keeps empty on purpose.
+  #
+  # Wayland comes from ELECTRON_OZONE_PLATFORM_HINT in hypr/custom/env.lua.
+  # A code-flags.conf would not help — VSCode is the documented exception
+  # that ignores its flags file.
+  - code
