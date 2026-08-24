@@ -460,49 +460,53 @@ the reason Firefox is preferable to a hardened fork here: the hardening is
 version-controlled and reproducible, while the browser still gets Mozilla's
 security patches first rather than after a fork rebases.
 
-### Corrections found by reading the real reference
+### Every value verified against firefox-admin-docs
 
-The `mozilla/policy-templates` README and its rendered site are both behind
-the admin docs. Reading the wrong one produced two wrong claims in this repo,
-both since fixed:
+Checked one page at a time rather than from recall. Structural errors found
+and fixed:
 
-- `DisableFeedbackCommands` was used as crash reporting. It is the "report
-  broken site" menus. `CrashReportsSubmit: false` is crash reporting.
-- The `Preferences` policy was said to reject `browser.*` and `dom.*`. It
-  does not — both are allowed prefixes. `privacy.*` is the one that is not
-  blanket-allowed: only `baselineFingerprintingProtection`,
-  `fingerprintingProtection`, `globalprivacycontrol.enabled`,
-  `userContext.enabled` and `userContext.ui.enabled` are permitted.
+- **CrashReportsSubmit is an object**, not a boolean. It takes an Enabled
+  key.
+- **GenerativeAI is an object** with Enabled / Chatbot / LinkPreviews /
+  TabGroups / SmartWindow. It was set to a bare false.
+- **AIChatbot is not an on/off switch.** It configures chatbot providers and
+  prompts. GenerativeAI.Chatbot is what disables the feature, so AIChatbot
+  is not set at all.
+- **DefaultSerialGuardSetting has no ask value.** 2 blocks, 3 allows. Any
+  policy at all blocks WebSerial by default, so 3 must be stated explicitly.
+- **PopupBlocking.Default true means popups are ALLOWED.** Blocking is
+  false.
+- **Cookies: partition-foreign** is the Firefox 153 name.
+  reject-tracker-and-partition-foreign is deprecated — renamed, same
+  behaviour.
+- **FirefoxHome.Snippets** was deprecated in 122 and is not set.
+  Stories/SponsoredStories replaced Pocket/SponsoredPocket in 141; both
+  pairs are set so the file works either side of that. Weather is new in 152
+  and fetches by location.
+- **UserMessaging.WhatsNew** is deprecated and not set.
+- **SearchEngines** works on release Firefox since 139; it is not ESR-only.
+- Both extension slugs confirmed on addons.mozilla.org.
+- **VisualSearchEnabled is independent of GenerativeAI**, so the two
+  settings do not conflict. It only works while Google is the default
+  engine, which it is.
 
-So Privacy-Preserving Attribution *is* settable, via
-`dom.private-attribution.submission.enabled`, and is set here.
+Earlier claims in this file that were wrong and are now corrected: the
+Preferences policy does allow browser.* and dom.* prefixes, so PPA is
+settable; privacy.* is the restricted one, with five individually permitted
+prefs. And DisableFeedbackCommands is the report-broken-site menus, not
+crash reporting.
 
-`about:policies` after first launch shows which policies applied and which
-were rejected. Worth checking rather than assuming — a misspelled key or a
-bad extension URL is ignored, not reported.
+**The one value not confirmable from the docs:** SearchEngines.Remove
+matches each engine display name, and Mozilla does not publish the built-in
+set — it varies by version and region. Read the real names off
+about:preferences#search if an engine survives.
 
-### DNS is deliberately untouched
+about:policies after first launch shows what applied and what was rejected.
+A misspelled key is ignored, not reported.
 
-`DNSOverHTTPS` is not set, so DNS keeps going to the Pi-hole.
+### DNS
 
-**That is not the same as DoH being off.** Firefox enables DoH by itself in
-some regions, and when it does, queries bypass the Pi-hole entirely — no
-blocking, no local records, nothing in its query log. Firefox's heuristics
-are supposed to detect a local resolver and back off, but they are
-heuristics.
-
-If the Pi-hole ever looks like it has stopped seeing Firefox traffic, check
-`about:networking#dns` before suspecting the Pi-hole. Pinning it off is
-`DNSOverHTTPS: {Enabled: false}`, deliberately not set here.
-
-### Unverified in this policy set
-
-- **The Wayback Machine extension URL.** AMO "latest" URLs resolve by slug;
-  uBlock Origin's is stable, the Internet Archive one is a guess. A bad URL
-  fails silently.
-- **`SearchEngines.Remove` names.** They match the engine's display name,
-  which is locale-dependent. If an engine survives, check
-  `about:preferences#search` for its exact name.
-- **`VisualSearchEnabled: true` alongside `GenerativeAI: false`.** Both are
-  set as asked, but visual search may depend on the AI features the other
-  policy disables. If it does not appear, that pairing is the first suspect.
+DNSOverHTTPS is set to Enabled false, which sets network.trr.mode=5. That
+turns DoH off *and* stops Firefox enabling it on its own, so DNS keeps
+reaching the Pi-hole. Locked is omitted, so it can still be switched on by
+hand later.

@@ -138,28 +138,33 @@ nyx_firefox_policies:
     # Studies is the Shield mechanism that ships experiments to subsets of
     # users without asking. It is how PPA arrived enabled.
     DisableFirefoxStudies: true
-    CrashReportsSubmit: false
+    # An object with an Enabled key, not a bare boolean.
+    CrashReportsSubmit:
+      Enabled: false
     # "Report broken site" menus, which send the URL to Mozilla.
     DisableFeedbackCommands: true
-    # Remotely-delivered config and performance rollouts (Nimbus). Turning it
-    # off means Firefox stops fetching and applying changes between updates —
-    # fewer callbacks and no remote reconfiguration, so privacy-forward.
+    # Firefox 148+. Stops remotely-delivered performance, stability and
+    # feature changes being applied between updates. Privacy-forward — fewer
+    # callbacks, no remote reconfiguration — but the same channel also
+    # carries fixes, so this trades some between-release patching for it.
     DisableRemoteImprovements: true
 
     # --- advertising and messaging -----------------------------------------
-    # Highlights is the "Recent activity" row: recently visited, bookmarked
-    # and downloaded. Snippets are Mozilla's own promotional messages on the
-    # new tab page.
+    # Highlights is the "Recent activity" row: kept.
+    # Stories/SponsoredStories replaced Pocket/SponsoredPocket in Firefox
+    # 141; both pairs are set so this works either side of that.
+    # Weather is a new-tab widget added in 152 that fetches by location.
+    # Snippets is NOT set: deprecated in Firefox 122, the feature is gone.
     FirefoxHome:
       Search: true
       TopSites: true
       SponsoredTopSites: false
-      Highlights: false
+      Highlights: true
+      Weather: false
       Pocket: false
-      Stories: false
       SponsoredPocket: false
+      Stories: false
       SponsoredStories: false
-      Snippets: false
 
     # ImproveSuggest is the telemetry feeding suggestion ranking.
     FirefoxSuggest:
@@ -167,29 +172,41 @@ nyx_firefox_policies:
       SponsoredSuggestions: false
       ImproveSuggest: false
 
-    # FirefoxLabs is the about:preferences#experimental panel, where
-    # unfinished features can be switched on. false hides it.
+    # FirefoxLabs true shows the about:preferences#experimental panel.
+    # WhatsNew is NOT set: deprecated.
     UserMessaging:
       ExtensionRecommendations: false
       FeatureRecommendations: false
       UrlbarInterventions: false
       SkipOnboarding: true
       MoreFromMozilla: false
-      FirefoxLabs: false
+      FirefoxLabs: true
       Locked: true
 
     SkipTermsOfUse: true
 
     # --- AI ----------------------------------------------------------------
-    AIChatbot: false
-    GenerativeAI: false
+    # An object, not a boolean. Chatbot covers the sidebar assistant, so the
+    # separate AIChatbot policy is unnecessary — that one configures chatbot
+    # providers rather than switching the feature on or off.
+    GenerativeAI:
+      Enabled: false
+      Chatbot: false
+      LinkPreviews: false
+      TabGroups: false
+      SmartWindow: false
+
+    # Independent of GenerativeAI, confirmed. Google Lens in the context
+    # menu, and it only works while Google is the default engine — which it
+    # is, below.
     VisualSearchEnabled: true
 
     # --- tracking ----------------------------------------------------------
-    # Fingerprinting blocks known fingerprinters from the Disconnect list and
-    # breaks very little. SuspectedFingerprinting is the newer, broader
-    # baseline protection — more aggressive, and the one to drop first if a
-    # site misbehaves.
+    # Fingerprinting blocks known fingerprinters and breaks very little.
+    # SuspectedFingerprinting (142+) is the broader baseline protection and
+    # is the one to drop first if a site misbehaves.
+    # Category is deliberately unset: it would override everything here
+    # except the three exception keys.
     EnableTrackingProtection:
       Value: true
       Cryptomining: true
@@ -198,23 +215,29 @@ nyx_firefox_policies:
       SuspectedFingerprinting: true
       Exceptions: []
 
-    # Strict-mode behaviour: block known trackers outright, partition
-    # everything else per-site. reject-foreign would block all third-party
-    # cookies and break SSO and payment flows; reject-tracker alone is the
-    # weakest of the three.
+    # partition-foreign is the Firefox 153 name for what used to be
+    # reject-tracker-and-partition-foreign, which is deprecated. Blocks known
+    # trackers and partitions all other third-party cookies per-site.
+    # reject-foreign would block third-party cookies outright and break SSO.
     Cookies:
-      Behavior: "reject-tracker-and-partition-foreign"
+      Behavior: "partition-foreign"
+      BehaviorPrivateBrowsing: "partition-foreign"
 
     LocalNetworkAccess:
       Enabled: true
       BlockTrackers: true
       EnablePrompting: true
 
-    # "enabled" turns HTTPS-Only on with a per-site "continue to HTTP"
-    # escape. force_enabled would remove that escape.
+    # DoH off. Enabled false sets network.trr.mode=5, which also stops
+    # Firefox's own automatic rollout, so DNS keeps reaching the Pi-hole.
+    # Locked is omitted, so it can still be turned on by hand later.
+    DNSOverHTTPS:
+      Enabled: false
+
+    # "enabled" is on-by-default with a per-site escape to HTTP.
+    # force_enabled would remove the escape.
     HttpsOnlyMode: "enabled"
 
-    # Mozilla's built-in VPN.
     IPProtectionAvailable: false
 
     # Prefetch and preconnect. More requests at the Pi-hole, faster loads.
@@ -231,12 +254,12 @@ nyx_firefox_policies:
     DisableProfileRefresh: true
 
     # --- permissions -------------------------------------------------------
-    # 3 = ask. Setting any policy switches Web Serial to the policy default,
-    # so this has to be stated explicitly to keep serial usable.
+    # 3 = allowed, 2 = blocked. There is no "ask" value. Setting any policy
+    # at all blocks WebSerial by default, so this has to be stated.
     DefaultSerialGuardSetting: 3
 
-    # Default false blocks popups. Locked false so exceptions can still be
-    # added per-site from the address bar.
+    # Default true means popups are ALLOWED, so blocking is false.
+    # Locked false keeps per-site exceptions available.
     PopupBlocking:
       Default: false
       Locked: false
@@ -252,18 +275,19 @@ nyx_firefox_policies:
           color: "orange"
 
     # --- extensions --------------------------------------------------------
-    # AMO "latest" URLs resolve by slug. uBlock Origin's is stable; the
-    # Wayback Machine one is a guess — check about:policies after first
-    # launch, a bad URL fails silently.
+    # Both slugs confirmed against addons.mozilla.org. Wayback Machine is the
+    # Internet Archive's own, slug wayback-machine_new.
     Extensions:
       Install:
         - "https://addons.mozilla.org/firefox/downloads/latest/ublock-origin/latest.xpi"
         - "https://addons.mozilla.org/firefox/downloads/latest/wayback-machine_new/latest.xpi"
 
     # --- search ------------------------------------------------------------
-    # Release Firefox has supported this since 139; it is no longer ESR-only.
-    # Remove matches the engine's display name, which is locale-dependent —
-    # check about:preferences#search if one survives.
+    # Release Firefox has supported this since 139; no longer ESR-only.
+    # Remove matches each engine display name. Mozilla does not publish the
+    # built-in set and it varies by version and region, so this is the one
+    # value here not confirmed from the docs — read the real names off
+    # about:preferences#search and correct it if an engine survives.
     SearchEngines:
       Default: "Google"
       Remove:
@@ -273,13 +297,9 @@ nyx_firefox_policies:
         - "eBay"
         - "Wikipedia (en)"
 
-    # --- prefs with no policy ----------------------------------------------
-    # Privacy-Preserving Attribution. dom. is an allowed prefix, so this does
-    # work — an earlier version of this file claimed otherwise.
-    #
-    # Global Privacy Control sends a legally-recognised opt-out signal under
-    # CCPA and similar. privacy.globalprivacycontrol.enabled is individually
-    # allowlisted.
+    # --- prefs -------------------------------------------------------------
+    # dom. and browser. are allowed prefixes. privacy.* is not blanket
+    # allowed, but globalprivacycontrol.enabled is individually permitted.
     Preferences:
       "dom.private-attribution.submission.enabled":
         Value: false
@@ -289,6 +309,3 @@ nyx_firefox_policies:
         Value: true
         Status: "default"
         Type: "boolean"
-
-    # NOT SET: DNSOverHTTPS, deliberately left alone so DNS keeps going to
-    # the Pi-hole. See docs/NOTES.md — Firefox can enable DoH on its own.
