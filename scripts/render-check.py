@@ -43,6 +43,7 @@ def build_env(tdir):
     env.filters["bool"] = lambda v: v is True or str(v).lower() in (
         "true", "1", "yes", "on",
     )
+    env.filters["to_nice_json"] = lambda v: json.dumps(v, indent=4, sort_keys=True)
     return env
 
 
@@ -108,6 +109,12 @@ def main():
                 except Exception as exc:  # noqa: BLE001
                     failures.append(f"{role}/{name} [{pname}]: {exc}")
                     continue
+
+                if name.endswith(".json.j2"):
+                    try:
+                        json.loads(out)
+                    except json.JSONDecodeError as exc:
+                        failures.append(f"{role}/{name} [{pname}] bad JSON: {exc}")
 
                 if name.endswith(".lua.j2"):
                     for problem in check_lua(out):

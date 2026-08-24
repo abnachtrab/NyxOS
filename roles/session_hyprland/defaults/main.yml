@@ -114,3 +114,85 @@ nyx_hypr_packages_apps:
   # A code-flags.conf would not help — VSCode is the documented exception
   # that ignores its flags file.
   - code
+  - firefox
+
+# ---------------------------------------------------------------------------
+# Firefox enterprise policy
+# ---------------------------------------------------------------------------
+# Rendered to /etc/firefox/policies/policies.json. System-wide, applied
+# before first launch, and not something the user has to re-click after a
+# reinstall — which is the point of putting it here rather than in settings.
+#
+# Written as YAML so the reasoning can live in comments; the template is just
+# a to_nice_json of this dict. Reference:
+# https://mozilla.github.io/policy-templates/
+#
+# "Locked": true would grey the setting out in the UI. Deliberately not used:
+# this is a personal machine, not a fleet, and a policy that cannot be
+# overridden is an annoyance the first time it is wrong.
+nyx_firefox_policies:
+  policies:
+
+    # --- data collection ---------------------------------------------------
+    # Telemetry, and the Studies/Shield mechanism that ships experiments to
+    # subsets of users without asking.
+    DisableTelemetry: true
+    DisableFirefoxStudies: true
+
+    # Crash reports.
+    DisableFeedbackCommands: true
+
+    # --- advertising -------------------------------------------------------
+    # Sponsored shortcuts on the new tab page, and Pocket's sponsored
+    # stories. These are the concrete ad surfaces that made "never sell your
+    # data" legally awkward to keep saying.
+    FirefoxHome:
+      Search: true
+      TopSites: true
+      SponsoredTopSites: false
+      Highlights: false
+      Pocket: false
+      SponsoredPocket: false
+      Snippets: false
+
+    # Feature nags, extension recommendations, "what's new" panels, and the
+    # onboarding tour.
+    UserMessaging:
+      WhatsNew: false
+      ExtensionRecommendations: false
+      FeatureRecommendations: false
+      UrlbarInterventions: false
+      MoreFromMozilla: false
+      SkipOnboarding: true
+
+    # --- tracking ----------------------------------------------------------
+    # Strict-equivalent protection, including the categories not enabled by
+    # default in Standard mode.
+    EnableTrackingProtection:
+      Value: true
+      Cryptomining: true
+      Fingerprinting: true
+      EmailTracking: true
+
+    # reject-tracker-and-partition-foreign is what Strict mode uses: block
+    # known trackers outright and partition everything else per-site, rather
+    # than blocking all third-party cookies and breaking logins.
+    Cookies:
+      Behavior: "reject-tracker-and-partition-foreign"
+
+    # --- prefs with no dedicated policy ------------------------------------
+    # Privacy-Preserving Attribution shipped enabled by default in 128 and
+    # has no policy of its own, so it goes through Preferences.
+    #
+    # Status "default" rather than "locked": settable in about:config if a
+    # site genuinely needs it.
+    Preferences:
+      "dom.private-attribution.submission.enabled":
+        Value: false
+        Status: "default"
+      "browser.urlbar.suggest.quicksuggest.sponsored":
+        Value: false
+        Status: "default"
+      "browser.newtabpage.activity-stream.showSponsoredTopSites":
+        Value: false
+        Status: "default"

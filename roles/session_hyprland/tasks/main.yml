@@ -201,6 +201,24 @@
     mode: "0644"
   when: "'spotify-launcher' in nyx_hypr_packages_apps"
 
+# System-wide Firefox policy. Applied before first launch, so a fresh
+# install never shows sponsored shortcuts or the onboarding tour, and none of
+# it has to be re-clicked after a reinstall. Root-owned: it overrides user
+# settings, so it must not be user-writable.
+- name: Firefox policy directory
+  ansible.builtin.file:
+    path: /etc/firefox/policies
+    state: directory
+    mode: "0755"
+  when: "'firefox' in nyx_hypr_packages_apps"
+
+- name: Firefox policies
+  ansible.builtin.template:
+    src: policies.json.j2
+    dest: /etc/firefox/policies/policies.json
+    mode: "0644"
+  when: "'firefox' in nyx_hypr_packages_apps"
+
 # Without an explicit preference the portal backend is chosen by whichever
 # .portal file sorts first, which breaks screenshare non-deterministically.
 # ii installs the KDE portal alongside the Hyprland and GTK ones, so this

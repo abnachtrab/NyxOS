@@ -423,3 +423,35 @@ Override profiles: `hyperv`, `intel-desktop-v3`, `amd-desktop-v4`,
   systemd's emergency shell unusable ("Cannot open access to console, the
   root account is locked"), so recovery depends on the recovery partition or
   external media. Worth populating that partition earlier than Phase 10.
+
+## Firefox policy
+
+`/etc/firefox/policies/policies.json`, rendered from `nyx_firefox_policies`.
+Reference: https://mozilla.github.io/policy-templates/
+
+It is a YAML dict rendered through `to_nice_json` rather than a static JSON
+file, so the reasoning for each setting can live in comments. `to_nice_json`
+is an Ansible filter, not core Jinja2, so `render-check.py` registers it —
+along with a JSON-validity check on any `.json.j2` output.
+
+Applied system-wide and before first launch, so a fresh install never shows
+sponsored shortcuts or the onboarding tour and none of it needs re-clicking
+after a reinstall. Root-owned, since it overrides user settings.
+
+`Locked: true` is deliberately not used anywhere. It greys the setting out in
+the UI, which is right for a managed fleet and wrong for one machine — a
+locked policy that turns out to be wrong is just an obstacle.
+
+Mozilla removed "we never sell your data" from the Firefox FAQ in February
+2025, alongside introducing a Terms of Use with a broad content licence. The
+licence was narrowed after backlash and the FAQ now reads "Mozilla doesn't
+sell data about you". The stated reason for dropping the absolute claim is
+real — CCPA defines "sale" as disclosure for any valuable consideration, and
+sponsored shortcuts arguably qualify — but it landed while Mozilla was
+building an ad business, having acquired Anonym in mid-2024 and shipped
+Privacy-Preserving Attribution enabled by default in Firefox 128.
+
+This policy file turns off the surfaces that made the claim awkward. It is
+the reason Firefox is preferable to a hardened fork here: the hardening is
+version-controlled and reproducible, while the browser still gets Mozilla's
+security patches first rather than after a fork rebases.
