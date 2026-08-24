@@ -64,11 +64,15 @@ nyx_ii_conflicting_daemons:
 # automatically, but roles/base already manages NoUpgrade in the same file.
 nyx_ii_ignore_group: true
 
-# The installer does a full pacman -Syu and then builds Quickshell against
-# Qt6. Ansible shows nothing until a command returns, so a working build and
-# a dead hang look identical — hence the log file and the timeout.
+# Ansible shows nothing until a command returns, so a working installer and
+# a wedged one look identical — hence the log file and the timeout.
+#
+# The timeout is a spin detector, not a build budget. Observed installs
+# finish in a couple of minutes on a fast link; the one run that hit 90
+# minutes was sudo failing in a retry loop, not a slow build. Raise it only
+# if a run is genuinely still working when it trips.
 nyx_ii_setup_log: "/home/{{ nyx_user }}/.cache/nyx-ii-setup.log"
-nyx_ii_setup_timeout: 5400
+nyx_ii_setup_timeout: 1800
 
 # Tweaks layered over ii's config after it is applied, so they win. Anything
 # under files/ii-overlay/ is copied into ~/.config with the same tree shape.

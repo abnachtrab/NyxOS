@@ -93,7 +93,9 @@ log was a loop of:
      -> exit status 1
 
 It was never compiling. `sudo_init_keepalive` could not authenticate, the
-script retried, and it spun until `async` cut it off.
+script retried, and it spun until `async` cut it off. A working install takes
+a couple of minutes on a fast link, so `nyx_ii_setup_timeout` is a spin
+detector rather than a build budget.
 
 Two separate things were wrong. With no controlling terminal sudo cannot
 prompt even when it decides it must — handled by running under `script
@@ -186,6 +188,18 @@ Updating is manual upstream — `git stash`, `git pull`, `./setup install`.
 The role re-runs the installer every play against `nyx_ii_version`, which
 tracks `main`. Pin it to a tag or commit once the desktop is one worth
 keeping.
+
+### Testing this
+
+The desktop is being brought up by reinstalling from the live ISO each time,
+not by re-running the playbook on a machine. So the loop is: download
+`install.sh` fresh, run it, and it clones the repo itself. There is no
+`git pull` step, and no state carried between attempts — which also means
+every attempt starts from a stock pacstrap, with no leftover `sudoers.d`
+files or half-applied config from the previous one.
+
+That is worth knowing when reading a failure: anything blamed on "a re-run"
+or "leftover state" does not apply here.
 
 NyxOS tweaks go in `files/ii-overlay/`, copied after ii so they win, mirroring
 the `~/.config` tree shape.
