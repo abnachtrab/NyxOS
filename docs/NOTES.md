@@ -95,16 +95,35 @@ log was a loop of:
 It was never compiling. `sudo_init_keepalive` could not authenticate, the
 script retried, and it spun until `async` cut it off.
 
-Two separate things are wrong there. sudo wanted a password at all, despite
-`/etc/sudoers.d/99-nyx-ii-temp` granting `NOPASSWD: ALL` to `nyx_user` —
-still unexplained, and worth settling with `sudo -l -U <user>`, since the
-grant validates with `visudo -cf` and is written before the installer runs.
-And separately, with no controlling terminal sudo cannot prompt even when it
-decides it must.
+Two separate things were wrong. With no controlling terminal sudo cannot
+prompt even when it decides it must — handled by running under `script
+-qec`, which allocates a pty, with stdin still `/dev/null` so a prompt that
+does appear reads EOF instead of waiting on a pty nobody is typing into.
 
-The second is now handled: the command runs under `script -qec`, which
-allocates a pty. stdin stays `/dev/null`, so a prompt that does appear reads
-EOF and fails rather than waiting on a pty nobody is typing into.
+And sudo wanted a password at all, despite the grant. That recurred once the
+pty was in place: the installer reached `install-local-pkgbuild`, whose
+`makepkg` shells out to `sudo pacman -U`, and got `[sudo] password for
+<user>`. The grant was present and had passed `visudo -cf`.
+
+The rule was being overridden rather than missed. Two changes, either of
+which is sufficient:
+
+- `Defaults:<user> !authenticate` alongside the `NOPASSWD: ALL` line. A
+  per-user default is not subject to the last-matching-Cmnd_Spec-wins
+  resolution that lets a `%wheel ... ALL` rule elsewhere beat a NOPASSWD
+  line in `sudoers.d`.
+- the file is `zz-nyx-ii-temp`, not `99-nyx-ii-temp`, so it sorts after
+  everything. Digits sort before letters, so `99-` loses to any
+  letter-prefixed file. Names containing a dot or ending in `~` are ignored
+  by sudo entirely.
+
+A `sudo -n true` check runs as the user immediately after the grant is
+written, so a grant that does not apply fails there with a clear reason
+instead of at an invisible password prompt forty minutes into the installer.
+
+What overrode it is still unconfirmed. `sudo -l -U <user>` while the grant
+is in place, and the tail of `/etc/sudoers`, would settle it — a `%wheel`
+rule parsed after `@includedir` would explain it exactly.
 
 Diagnosing a stuck run: output is appended to `nyx_ii_setup_log`, which is
 in **`nyx_user`'s** home, not root's — the play runs as root but this task

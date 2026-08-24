@@ -53,16 +53,39 @@
   become_user: "{{ nyx_user }}"
   register: nyx_ii_clone
 
-# ./setup install calls sudo_init_keepalive and needs more than pacman: it
-# also sets up permissions and services. Wider than the makepkg grant in
-# roles/base for that reason, and revoked in the always: block whether the
-# installer succeeds or not.
+# ./setup install calls sudo_init_keepalive and runs makepkg, which shells
+# out to `sudo pacman -U`. Wider than the makepkg grant in roles/base for
+# that reason, and revoked in the always: block whether the installer
+# succeeds or not.
+#
+# Two belts:
+#
+# `Defaults:<user> !authenticate` is a per-user default, not a command rule,
+# so it is not subject to the last-matching-Cmnd_Spec-wins resolution that
+# lets a %wheel rule elsewhere override a NOPASSWD line here.
+#
+# zz- so it sorts after everything in sudoers.d. 99- lost to something on a
+# real run: sudo kept prompting with the grant in place. Files containing a
+# dot or ending in ~ are ignored entirely, so the name matters.
 - name: Temporary passwordless sudo for the ii installer
   ansible.builtin.copy:
-    content: "{{ nyx_user }} ALL=(ALL) NOPASSWD: ALL\n"
-    dest: /etc/sudoers.d/99-nyx-ii-temp
+    content: |
+      Defaults:{{ nyx_user }} !authenticate
+      {{ nyx_user }} ALL=(ALL) NOPASSWD: ALL
+    dest: /etc/sudoers.d/zz-nyx-ii-temp
     mode: "0440"
     validate: "visudo -cf %s"
+
+# Fail here, with the reason, rather than 40 minutes later at an invisible
+# password prompt inside the installer.
+- name: Confirm the grant actually applies
+  ansible.builtin.command:
+    argv: ["sudo", "-n", "true"]
+  become: true
+  become_user: "{{ nyx_user }}"
+  register: nyx_ii_sudo_check
+  changed_when: false
+  failed_when: nyx_ii_sudo_check.rc != 0
 
 - name: Run the ii installer
   block:
@@ -104,7 +127,7 @@
   always:
     - name: Revoke temporary passwordless sudo
       ansible.builtin.file:
-        path: /etc/sudoers.d/99-nyx-ii-temp
+        path: /etc/sudoers.d/zz-nyx-ii-temp
         state: absent
 
 # --- NyxOS tweaks ---------------------------------------------------------
