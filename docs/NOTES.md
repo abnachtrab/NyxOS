@@ -111,6 +111,32 @@ in **`nyx_user`'s** home, not root's — the play runs as root but this task
 becomes the user. `ps -eo pid,stat,etime,args | grep -E
 'setup|pacman|makepkg|cc1plus'` distinguishes a real build from a spin.
 
+### pacman's own prompts are out of reach
+
+With the pty in place the installer got as far as `sudo pacman -Syu` and
+stopped at:
+
+    :: Replace zlib with cachyos/zlib-ng-compat? [Y/n]
+
+No `setup` flag reaches that — it is pacman asking, not the script. A
+replacement prompt on a pty with nobody typing is a stall.
+
+So Ansible does the upgrade instead: `--skip-sysupdate` on the installer,
+and a `community.general.pacman` task with `upgrade: true` ahead of it. The
+module passes `--noconfirm`, which answers replacement questions rather than
+asking them.
+
+The upgrade is not skipped, only moved. ii installs packages built against
+current libraries and Arch has no supported partial-upgrade state.
+
+That task runs **first** in the role, before the greetd and app packages, so
+those land on an already-upgraded system. `IgnoreGroup` is set before it, so
+a re-run does not pull ii's own packages out from under the installer.
+
+`roles/base` still installs `nyx_packages_base` without a preceding full
+upgrade, which is the same partial-upgrade exposure one role earlier. Not
+addressed.
+
 **`./setup install` prompts by default**, which under Ansible is a hang, not
 a failure. `-f` is the unattended path. Flags from
 `sdata/subcmd-install/options.sh`: `--core` (skips fish, fontconfig,

@@ -23,10 +23,16 @@ nyx_ii_checkout: "/home/{{ nyx_user }}/.cache/dots-hyprland"
 # ./setup install prompts by default, which would hang a play with stdin
 # closed. -f is upstream's "force mode without any confirm".
 #
-# A full pacman -Syu is deliberately NOT skipped: ii installs packages built
-# against current libraries, and Arch has no supported partial-upgrade state.
+# The system upgrade is skipped here and done by Ansible instead — see
+# nyx_ii_sysupgrade. Not to avoid upgrading: ii installs packages built
+# against current libraries and Arch has no supported partial-upgrade state,
+# so the upgrade has to happen. But `sudo pacman -Syu` inside the installer
+# asks things no setup flag can reach, such as
+# "Replace zlib with cachyos/zlib-ng-compat? [Y/n]", and a replacement
+# prompt on a pty with no one typing is a stall.
 #
-# Nothing is skipped except backup, which a fresh install has no use for.
+# Nothing else is skipped except backup, which a fresh install has no use
+# for.
 # ii owns the shell: fish config and the starship prompt come from it, which
 # is why there is no dotfiles role and no shell config in this repo.
 # fontconfig and plasma-browser-integration are kept for fonts and browser
@@ -37,6 +43,13 @@ nyx_ii_setup_args:
   # The greeting ends in a pause. -f is documented as covering confirms, but
   # the greeting is a separate flag and cheaper to pass than to test.
   - "--skip-allgreeting"
+  - "--skip-sysupdate"
+
+# Full -Syu before the installer runs, so its own skipped upgrade leaves
+# nothing to do. Ansible's pacman module passes --noconfirm, which answers
+# package-replacement questions instead of stalling on them. Set false only
+# if something else has already upgraded the system this boot.
+nyx_ii_sysupgrade: true
 
 # Notification daemons claim org.freedesktop.Notifications on the session bus.
 # Only one process can hold it, so anything left installed races Quickshell's

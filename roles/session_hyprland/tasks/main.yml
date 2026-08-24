@@ -4,6 +4,32 @@
 # colour scheme. This role owns package selection, the checkout, the overlay,
 # and login.
 
+# Upstream declines to edit pacman.conf automatically, calling it risky.
+# roles/base already manages NoUpgrade in this file, so the precedent exists.
+# Set before the upgrade so a re-run does not pull ii's packages from under
+# the installer.
+- name: Skip the illogical-impulse group on upgrade
+  ansible.builtin.lineinfile:
+    path: /etc/pacman.conf
+    regexp: '^IgnoreGroup\s*='
+    line: "IgnoreGroup = illogical-impulse"
+    insertafter: '^\[options\]'
+  when: nyx_ii_ignore_group | bool
+
+# First, so everything installed below lands on an upgraded system. Arch has
+# no supported partial-upgrade state, and ii installs packages built against
+# current libraries.
+#
+# Done here rather than by the installer's own `sudo pacman -Syu`, which
+# prompts for package replacements — "Replace zlib with
+# cachyos/zlib-ng-compat? [Y/n]" — and no setup flag reaches that. The
+# module passes --noconfirm, which answers them.
+- name: System upgrade
+  community.general.pacman:
+    update_cache: true
+    upgrade: true
+  when: nyx_ii_sysupgrade | bool
+
 - name: Login packages
   community.general.pacman:
     name: "{{ nyx_hypr_dm_packages + nyx_hypr_packages_apps }}"
@@ -16,16 +42,6 @@
   community.general.pacman:
     name: "{{ nyx_ii_conflicting_daemons }}"
     state: absent
-
-# Upstream declines to edit pacman.conf automatically, calling it risky.
-# roles/base already manages NoUpgrade in this file, so the precedent exists.
-- name: Skip the illogical-impulse group on upgrade
-  ansible.builtin.lineinfile:
-    path: /etc/pacman.conf
-    regexp: '^IgnoreGroup\s*='
-    line: "IgnoreGroup = illogical-impulse"
-    insertafter: '^\[options\]'
-  when: nyx_ii_ignore_group | bool
 
 # --- illogical-impulse ----------------------------------------------------
 - name: Fetch illogical-impulse
