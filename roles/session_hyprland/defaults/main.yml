@@ -134,71 +134,161 @@ nyx_firefox_policies:
   policies:
 
     # --- data collection ---------------------------------------------------
-    # Telemetry, and the Studies/Shield mechanism that ships experiments to
-    # subsets of users without asking — which is how PPA arrived.
     DisableTelemetry: true
+    # Studies is the Shield mechanism that ships experiments to subsets of
+    # users without asking. It is how PPA arrived enabled.
     DisableFirefoxStudies: true
-
-    # Crash reports. Not DisableFeedbackCommands, which despite the name is
-    # only the "report broken site" menus.
     CrashReportsSubmit: false
+    # "Report broken site" menus, which send the URL to Mozilla.
+    DisableFeedbackCommands: true
+    # Remotely-delivered config and performance rollouts (Nimbus). Turning it
+    # off means Firefox stops fetching and applying changes between updates —
+    # fewer callbacks and no remote reconfiguration, so privacy-forward.
+    DisableRemoteImprovements: true
 
-    # --- advertising -------------------------------------------------------
-    # Sponsored shortcuts on the new tab page, and Pocket's sponsored
-    # stories. These are the concrete ad surfaces that made "never sell your
-    # data" legally awkward to keep saying.
+    # --- advertising and messaging -----------------------------------------
+    # Highlights is the "Recent activity" row: recently visited, bookmarked
+    # and downloaded. Snippets are Mozilla's own promotional messages on the
+    # new tab page.
     FirefoxHome:
       Search: true
       TopSites: true
       SponsoredTopSites: false
       Highlights: false
       Pocket: false
+      Stories: false
       SponsoredPocket: false
+      SponsoredStories: false
       Snippets: false
 
-    # Sponsored results in the address bar. ImproveSuggest is the telemetry
-    # that feeds suggestion ranking.
+    # ImproveSuggest is the telemetry feeding suggestion ranking.
     FirefoxSuggest:
       WebSuggestions: true
       SponsoredSuggestions: false
       ImproveSuggest: false
 
-    # Feature nags, extension recommendations, "what's new" panels, and the
-    # onboarding tour.
+    # FirefoxLabs is the about:preferences#experimental panel, where
+    # unfinished features can be switched on. false hides it.
     UserMessaging:
-      WhatsNew: false
       ExtensionRecommendations: false
       FeatureRecommendations: false
       UrlbarInterventions: false
-      MoreFromMozilla: false
       SkipOnboarding: true
+      MoreFromMozilla: false
+      FirefoxLabs: false
+      Locked: true
+
+    SkipTermsOfUse: true
 
     # --- AI ----------------------------------------------------------------
-    # Newer surfaces, off by default here on the same reasoning as the ad
-    # ones: opt in deliberately rather than find them already on.
     AIChatbot: false
     GenerativeAI: false
+    VisualSearchEnabled: true
 
     # --- tracking ----------------------------------------------------------
-    # Strict-equivalent protection, including the categories not enabled by
-    # default in Standard mode.
+    # Fingerprinting blocks known fingerprinters from the Disconnect list and
+    # breaks very little. SuspectedFingerprinting is the newer, broader
+    # baseline protection — more aggressive, and the one to drop first if a
+    # site misbehaves.
     EnableTrackingProtection:
       Value: true
       Cryptomining: true
       Fingerprinting: true
       EmailTracking: true
+      SuspectedFingerprinting: true
+      Exceptions: []
 
-    # reject-tracker-and-partition-foreign is what Strict mode uses: block
-    # known trackers outright and partition everything else per-site, rather
-    # than blocking all third-party cookies and breaking logins.
+    # Strict-mode behaviour: block known trackers outright, partition
+    # everything else per-site. reject-foreign would block all third-party
+    # cookies and break SSO and payment flows; reject-tracker alone is the
+    # weakest of the three.
     Cookies:
       Behavior: "reject-tracker-and-partition-foreign"
 
-    # The Terms of Use panel introduced in February 2025.
-    SkipTermsOfUse: true
+    LocalNetworkAccess:
+      Enabled: true
+      BlockTrackers: true
+      EnablePrompting: true
 
-    # NOT SET, and not settable: Privacy-Preserving Attribution
-    # (dom.private-attribution.submission.enabled). There is no policy for
-    # it, and the Preferences policy only accepts an allowlist of prefixes
-    # that does not include dom.private-attribution.* — so it has to be
-    # turned off in about:config or about:preferences#privacy by hand.
+    # "enabled" turns HTTPS-Only on with a per-site "continue to HTTP"
+    # escape. force_enabled would remove that escape.
+    HttpsOnlyMode: "enabled"
+
+    # Mozilla's built-in VPN.
+    IPProtectionAvailable: false
+
+    # Prefetch and preconnect. More requests at the Pi-hole, faster loads.
+    NetworkPrediction: true
+
+    # --- accounts and passwords --------------------------------------------
+    DisableFirefoxAccounts: true
+    PasswordManagerEnabled: false
+    DisableFormHistory: true
+
+    # --- annoyances --------------------------------------------------------
+    NoDefaultBookmarks: true
+    DisableSetDesktopBackground: true
+    DisableProfileRefresh: true
+
+    # --- permissions -------------------------------------------------------
+    # 3 = ask. Setting any policy switches Web Serial to the policy default,
+    # so this has to be stated explicitly to keep serial usable.
+    DefaultSerialGuardSetting: 3
+
+    # Default false blocks popups. Locked false so exceptions can still be
+    # added per-site from the address bar.
+    PopupBlocking:
+      Default: false
+      Locked: false
+
+    # --- containers --------------------------------------------------------
+    Containers:
+      Default:
+        - name: "Personal"
+          icon: "fingerprint"
+          color: "blue"
+        - name: "Work"
+          icon: "briefcase"
+          color: "orange"
+
+    # --- extensions --------------------------------------------------------
+    # AMO "latest" URLs resolve by slug. uBlock Origin's is stable; the
+    # Wayback Machine one is a guess — check about:policies after first
+    # launch, a bad URL fails silently.
+    Extensions:
+      Install:
+        - "https://addons.mozilla.org/firefox/downloads/latest/ublock-origin/latest.xpi"
+        - "https://addons.mozilla.org/firefox/downloads/latest/wayback-machine_new/latest.xpi"
+
+    # --- search ------------------------------------------------------------
+    # Release Firefox has supported this since 139; it is no longer ESR-only.
+    # Remove matches the engine's display name, which is locale-dependent —
+    # check about:preferences#search if one survives.
+    SearchEngines:
+      Default: "Google"
+      Remove:
+        - "Bing"
+        - "DuckDuckGo"
+        - "Amazon.com"
+        - "eBay"
+        - "Wikipedia (en)"
+
+    # --- prefs with no policy ----------------------------------------------
+    # Privacy-Preserving Attribution. dom. is an allowed prefix, so this does
+    # work — an earlier version of this file claimed otherwise.
+    #
+    # Global Privacy Control sends a legally-recognised opt-out signal under
+    # CCPA and similar. privacy.globalprivacycontrol.enabled is individually
+    # allowlisted.
+    Preferences:
+      "dom.private-attribution.submission.enabled":
+        Value: false
+        Status: "default"
+        Type: "boolean"
+      "privacy.globalprivacycontrol.enabled":
+        Value: true
+        Status: "default"
+        Type: "boolean"
+
+    # NOT SET: DNSOverHTTPS, deliberately left alone so DNS keeps going to
+    # the Pi-hole. See docs/NOTES.md — Firefox can enable DoH on its own.

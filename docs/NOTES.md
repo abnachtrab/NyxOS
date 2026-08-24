@@ -462,26 +462,47 @@ security patches first rather than after a fork rebases.
 
 ### Corrections found by reading the real reference
 
-Three things were wrong in the first version of this file, all of which
-would have failed silently rather than erroring:
+The `mozilla/policy-templates` README and its rendered site are both behind
+the admin docs. Reading the wrong one produced two wrong claims in this repo,
+both since fixed:
 
-- **The `Preferences` policy takes an allowlist of prefixes.** It was being
-  used to set `dom.private-attribution.submission.enabled`,
-  `browser.urlbar.suggest.quicksuggest.sponsored`, and
-  `browser.newtabpage.activity-stream.showSponsoredTopSites`. None of those
-  prefixes are permitted, so the whole block was inert. Removed.
-- **`DisableFeedbackCommands` is not crash reporting.** It disables the
-  "report broken site" menus. `CrashReportsSubmit: false` is the right one.
-- **Sponsored address-bar results have their own policy**, `FirefoxSuggest`,
-  with `WebSuggestions` / `SponsoredSuggestions` / `ImproveSuggest`. That is
-  what the rejected `browser.urlbar.*` pref was reaching for.
+- `DisableFeedbackCommands` was used as crash reporting. It is the "report
+  broken site" menus. `CrashReportsSubmit: false` is crash reporting.
+- The `Preferences` policy was said to reject `browser.*` and `dom.*`. It
+  does not — both are allowed prefixes. `privacy.*` is the one that is not
+  blanket-allowed: only `baselineFingerprintingProtection`,
+  `fingerprintingProtection`, `globalprivacycontrol.enabled`,
+  `userContext.enabled` and `userContext.ui.enabled` are permitted.
 
-**Privacy-Preserving Attribution cannot be set by policy at all.** There is
-no policy for it and the `Preferences` allowlist excludes
-`dom.private-attribution.*`, so it has to be turned off by hand in
-`about:preferences#privacy`. That is the one item in this setup that a
-reinstall does not reproduce.
+So Privacy-Preserving Attribution *is* settable, via
+`dom.private-attribution.submission.enabled`, and is set here.
 
 `about:policies` after first launch shows which policies applied and which
-were rejected. Worth checking rather than assuming — a misspelled key is
-ignored, not reported.
+were rejected. Worth checking rather than assuming — a misspelled key or a
+bad extension URL is ignored, not reported.
+
+### DNS is deliberately untouched
+
+`DNSOverHTTPS` is not set, so DNS keeps going to the Pi-hole.
+
+**That is not the same as DoH being off.** Firefox enables DoH by itself in
+some regions, and when it does, queries bypass the Pi-hole entirely — no
+blocking, no local records, nothing in its query log. Firefox's heuristics
+are supposed to detect a local resolver and back off, but they are
+heuristics.
+
+If the Pi-hole ever looks like it has stopped seeing Firefox traffic, check
+`about:networking#dns` before suspecting the Pi-hole. Pinning it off is
+`DNSOverHTTPS: {Enabled: false}`, deliberately not set here.
+
+### Unverified in this policy set
+
+- **The Wayback Machine extension URL.** AMO "latest" URLs resolve by slug;
+  uBlock Origin's is stable, the Internet Archive one is a guess. A bad URL
+  fails silently.
+- **`SearchEngines.Remove` names.** They match the engine's display name,
+  which is locale-dependent. If an engine survives, check
+  `about:preferences#search` for its exact name.
+- **`VisualSearchEnabled: true` alongside `GenerativeAI: false`.** Both are
+  set as asked, but visual search may depend on the AI features the other
+  policy disables. If it does not appear, that pairing is the first suspect.
