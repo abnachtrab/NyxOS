@@ -31,21 +31,8 @@ On Hyper-V (Gen 2, `linux-cachyos`, Zen 5 host) unless stated otherwise.
 The switch to illogical-impulse is unrun. Everything in this section is
 reasoning, not observation.
 
-- **`./setup install` completing unattended.** The first real run stalled at
-  this task. Two candidates, and they look identical from Ansible: a prompt
-  the flags do not cover, or the installer simply being slow — it does a
-  full `pacman -Syu` and then builds Quickshell against Qt6, and Ansible
-  shows nothing until a command returns.
-
-  Both are now handled rather than diagnosed. `< /dev/null` makes any
-  surviving prompt read EOF and fail instead of waiting forever;
-  `--skip-allgreeting` covers the greeting's `pause`, which `-f` may not;
-  `async`/`poll` caps the task at `nyx_ii_setup_timeout`; and output goes to
-  `nyx_ii_setup_log` so it can be tailed while the play is still running.
-
-  To tell the two apart on a stuck run:
-  `ps -eo pid,stat,etime,args | grep -E 'setup|pacman|makepkg|cc1plus'`.
-  Compiler processes mean it is working.
+- **`./setup install` completing unattended.** Still unproven; the pty fix
+  below is untested. See "The installer needs a pty".
 - **`NOPASSWD: ALL` covering the installer.** It runs `sudo_init_keepalive`
   and touches permissions and services, not just pacman. If it reaches for
   something outside the grant it prompts, and that hangs too.
@@ -94,6 +81,35 @@ ii's environment and defaults, then `custom/`. NyxOS environment goes in
 `custom/env.lua` as `hl.env()` calls. A hyprlang `.conf` file in `custom/`
 is silently never read — that cost a commit, and the file that failed to
 load was the one carrying the VM software-GL block.
+
+### The installer needs a pty
+
+The first real run sat for the full 90-minute timeout and then failed. The
+log was a loop of:
+
+    sudo: a terminal is required to read the password; either use the -S
+    option to read from standard input or configure an askpass helper
+    sudo: a password is required
+     -> exit status 1
+
+It was never compiling. `sudo_init_keepalive` could not authenticate, the
+script retried, and it spun until `async` cut it off.
+
+Two separate things are wrong there. sudo wanted a password at all, despite
+`/etc/sudoers.d/99-nyx-ii-temp` granting `NOPASSWD: ALL` to `nyx_user` —
+still unexplained, and worth settling with `sudo -l -U <user>`, since the
+grant validates with `visudo -cf` and is written before the installer runs.
+And separately, with no controlling terminal sudo cannot prompt even when it
+decides it must.
+
+The second is now handled: the command runs under `script -qec`, which
+allocates a pty. stdin stays `/dev/null`, so a prompt that does appear reads
+EOF and fails rather than waiting on a pty nobody is typing into.
+
+Diagnosing a stuck run: output is appended to `nyx_ii_setup_log`, which is
+in **`nyx_user`'s** home, not root's — the play runs as root but this task
+becomes the user. `ps -eo pid,stat,etime,args | grep -E
+'setup|pacman|makepkg|cc1plus'` distinguishes a real build from a spin.
 
 **`./setup install` prompts by default**, which under Ansible is a hang, not
 a failure. `-f` is the unattended path. Flags from

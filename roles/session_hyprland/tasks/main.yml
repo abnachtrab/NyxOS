@@ -53,9 +53,14 @@
     # Installs the illogical-impulse-* meta-packages and copies the config
     # tree. Long: a full pacman -Syu, then Quickshell built against Qt6.
     #
-    # < /dev/null is the important part. Any prompt the flags do not cover
-    # reads EOF and the script fails, instead of sitting there forever with
-    # Ansible showing nothing. async gives a second backstop.
+    # `script` allocates a pty. Without one, the installer's sudo calls fail
+    # with "a terminal is required to read the password" and it retries in a
+    # loop until the async timeout — 90 minutes of nothing, which is how this
+    # presented the first time.
+    #
+    # stdin stays /dev/null so a prompt that does appear reads EOF and fails
+    # rather than waiting on a pty nobody is typing into. async is the
+    # backstop if it wedges anyway.
     #
     # Output goes to a file because Ansible buffers a command's output until
     # it returns; tail that log to see whether it is working or stuck.
@@ -66,8 +71,8 @@
     - name: setup install
       ansible.builtin.shell:
         cmd: >-
-          ./setup install {{ nyx_ii_setup_args | join(' ') }}
-          < /dev/null >> {{ nyx_ii_setup_log }} 2>&1
+          script -qec './setup install {{ nyx_ii_setup_args | join(' ') }}'
+          /dev/null < /dev/null >> {{ nyx_ii_setup_log }} 2>&1
         chdir: "{{ nyx_ii_checkout }}"
       become: true
       become_user: "{{ nyx_user }}"
