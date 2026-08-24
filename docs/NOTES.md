@@ -427,7 +427,11 @@ Override profiles: `hyperv`, `intel-desktop-v3`, `amd-desktop-v4`,
 ## Firefox policy
 
 `/etc/firefox/policies/policies.json`, rendered from `nyx_firefox_policies`.
-Reference: https://mozilla.github.io/policy-templates/
+
+Reference is **https://firefox-admin-docs.mozilla.org/reference/policies/**.
+The old `mozilla/policy-templates` README now only points there, and its
+rendered site is behind the current docs — check names against the admin
+docs, not against a search result.
 
 It is a YAML dict rendered through `to_nice_json` rather than a static JSON
 file, so the reasoning for each setting can live in comments. `to_nice_json`
@@ -455,3 +459,29 @@ This policy file turns off the surfaces that made the claim awkward. It is
 the reason Firefox is preferable to a hardened fork here: the hardening is
 version-controlled and reproducible, while the browser still gets Mozilla's
 security patches first rather than after a fork rebases.
+
+### Corrections found by reading the real reference
+
+Three things were wrong in the first version of this file, all of which
+would have failed silently rather than erroring:
+
+- **The `Preferences` policy takes an allowlist of prefixes.** It was being
+  used to set `dom.private-attribution.submission.enabled`,
+  `browser.urlbar.suggest.quicksuggest.sponsored`, and
+  `browser.newtabpage.activity-stream.showSponsoredTopSites`. None of those
+  prefixes are permitted, so the whole block was inert. Removed.
+- **`DisableFeedbackCommands` is not crash reporting.** It disables the
+  "report broken site" menus. `CrashReportsSubmit: false` is the right one.
+- **Sponsored address-bar results have their own policy**, `FirefoxSuggest`,
+  with `WebSuggestions` / `SponsoredSuggestions` / `ImproveSuggest`. That is
+  what the rejected `browser.urlbar.*` pref was reaching for.
+
+**Privacy-Preserving Attribution cannot be set by policy at all.** There is
+no policy for it and the `Preferences` allowlist excludes
+`dom.private-attribution.*`, so it has to be turned off by hand in
+`about:preferences#privacy`. That is the one item in this setup that a
+reinstall does not reproduce.
+
+`about:policies` after first launch shows which policies applied and which
+were rejected. Worth checking rather than assuming — a misspelled key is
+ignored, not reported.

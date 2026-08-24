@@ -135,12 +135,13 @@ nyx_firefox_policies:
 
     # --- data collection ---------------------------------------------------
     # Telemetry, and the Studies/Shield mechanism that ships experiments to
-    # subsets of users without asking.
+    # subsets of users without asking — which is how PPA arrived.
     DisableTelemetry: true
     DisableFirefoxStudies: true
 
-    # Crash reports.
-    DisableFeedbackCommands: true
+    # Crash reports. Not DisableFeedbackCommands, which despite the name is
+    # only the "report broken site" menus.
+    CrashReportsSubmit: false
 
     # --- advertising -------------------------------------------------------
     # Sponsored shortcuts on the new tab page, and Pocket's sponsored
@@ -155,6 +156,13 @@ nyx_firefox_policies:
       SponsoredPocket: false
       Snippets: false
 
+    # Sponsored results in the address bar. ImproveSuggest is the telemetry
+    # that feeds suggestion ranking.
+    FirefoxSuggest:
+      WebSuggestions: true
+      SponsoredSuggestions: false
+      ImproveSuggest: false
+
     # Feature nags, extension recommendations, "what's new" panels, and the
     # onboarding tour.
     UserMessaging:
@@ -164,6 +172,12 @@ nyx_firefox_policies:
       UrlbarInterventions: false
       MoreFromMozilla: false
       SkipOnboarding: true
+
+    # --- AI ----------------------------------------------------------------
+    # Newer surfaces, off by default here on the same reasoning as the ad
+    # ones: opt in deliberately rather than find them already on.
+    AIChatbot: false
+    GenerativeAI: false
 
     # --- tracking ----------------------------------------------------------
     # Strict-equivalent protection, including the categories not enabled by
@@ -180,19 +194,11 @@ nyx_firefox_policies:
     Cookies:
       Behavior: "reject-tracker-and-partition-foreign"
 
-    # --- prefs with no dedicated policy ------------------------------------
-    # Privacy-Preserving Attribution shipped enabled by default in 128 and
-    # has no policy of its own, so it goes through Preferences.
-    #
-    # Status "default" rather than "locked": settable in about:config if a
-    # site genuinely needs it.
-    Preferences:
-      "dom.private-attribution.submission.enabled":
-        Value: false
-        Status: "default"
-      "browser.urlbar.suggest.quicksuggest.sponsored":
-        Value: false
-        Status: "default"
-      "browser.newtabpage.activity-stream.showSponsoredTopSites":
-        Value: false
-        Status: "default"
+    # The Terms of Use panel introduced in February 2025.
+    SkipTermsOfUse: true
+
+    # NOT SET, and not settable: Privacy-Preserving Attribution
+    # (dom.private-attribution.submission.enabled). There is no policy for
+    # it, and the Preferences policy only accepts an allowlist of prefixes
+    # that does not include dom.private-attribution.* — so it has to be
+    # turned off in about:config or about:preferences#privacy by hand.
