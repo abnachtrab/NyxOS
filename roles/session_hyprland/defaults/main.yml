@@ -290,10 +290,16 @@ nyx_firefox_policies:
     # at all blocks WebSerial by default, so this has to be stated.
     DefaultSerialGuardSetting: 3
 
-    # Default true means popups are ALLOWED, so blocking is false.
-    # Locked false keeps per-site exceptions available.
+    # The docs describe Default as "determines whether or not pop-up windows
+    # and third-party redirects are allowed by default", which reads as
+    # false = blocked. On a fresh profile false produced UNBLOCKED, and stock
+    # Firefox blocks by default — so the policy actively turned the blocker
+    # off. Default maps to the blocker state, not to whether popups are
+    # allowed. Set from observation, against the documentation.
+    #
+    # Locked stays false so per-site exceptions can still be added.
     PopupBlocking:
-      Default: false
+      Default: true
       Locked: false
 
     # --- containers --------------------------------------------------------

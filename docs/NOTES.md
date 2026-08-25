@@ -680,3 +680,43 @@ decoder and interpolation runs on llvmpipe. Judge this on hardware.
 
 The restore script it generates, __restore_video_wallpaper.sh, pkills
 mpvpaper and relaunches one instance per monitor from hyprctl monitors -j.
+
+### What a real install taught that the docs did not
+
+Two policies were correct against the documentation and wrong in practice.
+Both surfaced only on a fresh profile, and `about:policies` is what found
+them.
+
+**`CrashReportsSubmit` is unknown to this Firefox.** It is listed in the
+current admin docs, but `about:policies#errors` reports
+`Unknown policy: CrashReportsSubmit` — the build predates it. An
+unrecognised policy is silently inert, so the errors tab is the only place
+it shows up. Removed. `DisableTelemetry` covers most of what it would have
+done; anything more specific would go through `Preferences`, where
+`browser.*` is an allowed prefix.
+
+**`PopupBlocking.Default` is documented backwards.** The docs say it
+"determines whether or not pop-up windows and third-party redirects are
+allowed by default", which reads as `false` = blocked. On a fresh install
+`false` produced *unblocked* — and stock Firefox blocks popups, so the
+policy actively turned the blocker off. It is set to `true` here, from
+observation rather than documentation. Re-test if it ever seems wrong.
+
+### about:policies is the only way to check any of this
+
+`#active` lists what Firefox parsed, `#errors` lists what it rejected. A
+policy with a bad key or an unknown name is ignored silently — nothing logs,
+nothing warns, and the setting simply keeps its old value.
+
+Two things it does *not* tell you, both of which cost time here:
+
+- An unlocked policy sets the **default**. It applies cleanly to a fresh
+  profile, but anything changed by hand afterwards wins and the policy sits
+  underneath doing nothing. A setting that "did not apply" is often one that
+  was clicked later.
+- `#active` shows the value Firefox parsed, not the value in effect. Those
+  differ whenever the point above applies.
+
+`Locked: true` removes that ambiguity by greying the setting out, at the cost
+of not being able to change it at all. Not used here — this is one machine,
+not a fleet — but it is the lever if a policy keeps losing to manual changes.
