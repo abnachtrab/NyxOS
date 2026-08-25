@@ -57,7 +57,7 @@ test that matters.
 
 ---
 
-## Phase 5 — session_hyprland  *(ii switch unrun)*
+## Phase 5 — session_hyprland  *(done)*
 
 The shell is illogical-impulse: Quickshell bar, notifications, launcher,
 OSD, session menu, its own Hyprland config in Lua, and fish with starship.
@@ -75,9 +75,10 @@ layers NyxOS on top.
 - **GPU branch** in the same file: nvidia / radeonsi / iHD.
   `WLR_NO_HARDWARE_CURSORS` deliberately omitted — obsolete since 555.
 
-A pre-ii build booted, reached tuigreet, authenticated and started Hyprland.
-Nothing since has been run. See "Not yet verified" in NOTES.md before
-trusting this phase.
+Verified on a real install: boots, reaches tuigreet, authenticates, and
+starts Hyprland running end4-pC. Firefox policy and extensions apply. What
+that run did not cover is listed under "Not yet verified" in NOTES.md — most
+notably whether `hypr/custom/env.lua` is the thing supplying software GL.
 
 Still to do: a wallpaper. `nyx_hypr_wallpaper` is empty and matugen has
 nothing to derive a scheme from without one.

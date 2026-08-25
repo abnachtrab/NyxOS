@@ -1,13 +1,26 @@
 # Notes
 
-What has been verified against real hardware, what is still assumed, and the
-traps that cost a debugging session. Rewritten after the switch to
-illogical-impulse; anything about the old NyxOS palette and hand-written
-Hyprland config is gone with it.
+What has been verified by running it, what is still assumed, and the traps
+that cost a debugging session. The illogical-impulse switch has been through
+a full install, boot and login; the sections below say which parts that
+actually covered.
 
 ## Verified by running
 
 On Hyper-V (Gen 2, `linux-cachyos`, Zen 5 host) unless stated otherwise.
+A full install from the live ISO, boot, login and desktop have all been done
+on the current configuration.
+
+**Install and boot**
+
+- `install.sh` partitions, pacstraps, chroots and provisions unattended.
+- btrfs root boots. `rootflags=subvol=@` in `refind_linux.conf` is correct,
+  and a single-device btrfs root needs nothing added to `mkinitcpio.conf` —
+  the `filesystems` hook covers it via autodetect.
+- The temporary `NOPASSWD` grant is revoked on the target: after a completed
+  install `/etc/sudoers.d/` holds only `10-wheel`.
+
+**detect and base**
 
 - `roles/detect` runs clean and is safe standalone.
 - `ansible_virtualization_type` returns `VirtualPC`; `march` returns
@@ -22,33 +35,43 @@ On Hyper-V (Gen 2, `linux-cachyos`, Zen 5 host) unless stated otherwise.
   hardware is unconfirmed.**
 - `roles/base`: repo assert reads all four sections, `7zip` resolves, yay
   bootstraps, the temporary sudoers grant is revoked.
-- A full install boots, reaches tuigreet, authenticates, and starts
-  Hyprland. That was on the pre-ii config; the shell has been replaced
-  since, so see "Not yet verified".
+
+**Session**
+
+- greetd reaches tuigreet, authenticates, and starts Hyprland.
+- `./setup install` completes unattended — with `-f`, `--skip-allgreeting`,
+  `--skip-sysupdate`, a pty from `script -qec`, stdin from `/dev/null`, and
+  the `zz-` sudoers grant. Every one of those was needed; see below.
+- end4-pC clones to `~/.config/quickshell/end4-pC`, the `qsConfig` lineinfile
+  takes, and `pgrep -a qs` shows `qs -c end4-pC` after login.
+
+**Firefox**
+
+- All five extensions install from policy: uBlock Origin, Wayback Machine,
+  Multi-Account Containers, Enhancer for YouTube, Dashlane.
+- The policy file applies. `about:policies#errors` had exactly one entry,
+  `CrashReportsSubmit`, since removed.
+- Reapplying with `--tags firefox` and restarting the browser moves every
+  value except ones changed by hand.
 
 ## Not yet verified
 
-The switch to illogical-impulse is unrun. Everything in this section is
-reasoning, not observation.
-
-- **`./setup install` completing unattended.** Still unproven; the pty fix
-  below is untested. See "The installer needs a pty".
-- **`NOPASSWD: ALL` covering the installer.** It runs `sudo_init_keepalive`
-  and touches permissions and services, not just pacman. If it reaches for
-  something outside the grant it prompts, and that hangs too.
-- **`hypr/custom/env.lua` actually being sourced.** ii's docs describe
-  `custom/` as the override directory and name `env.lua`. If the path is
-  wrong the file is inert, and under Hyper-V that means no software GL and
-  no session.
-- **`roles/gpu` on real hardware.** Untestable in Hyper-V — no PCI GPU. Use
-  `-e @profiles/...` for the render path, but nothing there proves DKMS
+- **`hypr/custom/env.lua` actually being sourced.** ii's docs name `custom/`
+  as the override directory and `env.lua` as the file, and the session does
+  start under Hyper-V — but nothing has confirmed the file is what supplies
+  software GL rather than ii doing it some other way. `hyprctl getenv | grep
+  LIBGL_ALWAYS_SOFTWARE` settles it. Matters because the same file carries
+  the GPU vendor branching that real hardware will depend on.
+- **`roles/gpu` on real hardware.** Untestable in Hyper-V — no PCI GPU.
+  `-e @profiles/...` exercises the render path, but nothing there proves DKMS
   builds or that modeset takes.
-- **btrfs root booting.** `rootflags=subvol=@` is written but has not been
-  booted from. If the machine drops to an initramfs shell, that line in
-  `refind_linux.conf` is the first suspect.
-- **Whether single-device btrfs needs anything in `mkinitcpio.conf`.** The
-  `filesystems` hook should pull the module in via autodetect and the
-  `btrfs` hook is for multi-device arrays, but this is untested.
+- **Whether a package owns `/etc/modprobe.d/nvidia.conf`.** If one does, the
+  gpu role is clobbering packaged config and should write
+  `nyxos-nvidia.conf` instead. `pacman -Qo` settles it.
+- **What overrode the sudoers grant.** `99-nyx-ii-temp` lost to something
+  with `NOPASSWD: ALL` in place and `visudo -cf` passing. Renaming to `zz-`
+  and adding `Defaults:<user> !authenticate` fixed it, but the cause is
+  still unknown — `sudo -l -U <user>` while the grant exists would say.
 
 ## Check against upstream before relying on it
 
@@ -643,17 +666,21 @@ it is a plain repo install and `nyx_packages_aur` stays empty. Nothing else
 pulls it in: ii does not know about the feature, and end4-pC is a cloned
 config directory rather than a package, so it declares no dependencies.
 
-### The wallpaper task is wrong
+### How the wallpaper is deployed
 
-`nyx_hypr_wallpaper` copies an image to `~/.config/background`. Nothing reads
-that path. The shell reads `background.wallpaperPath` from config.json, and
-colours only regenerate when switchwall.sh runs.
+`nyx_hypr_wallpaper` names a source image; it is copied into
+`~/Pictures/Wallpapers`, the picker directory, and
+`background.wallpaperPath` in the config template follows it. Empty leaves
+ii's bundled default in place.
 
-Latent so far because the variable is empty and the task is skipped. Setting
-it would silently do nothing. The fix is to point `background.wallpaperPath`
-in the config template at a deployed file, and to regenerate colours —
-`--noswitch` looks like the headless-safe call, since actually displaying a
-wallpaper needs a running compositor and provisioning has none.
+It used to copy to `~/.config/background`, which nothing reads — latent only
+because the variable was empty, and silently useless the moment it was set.
+
+Colours are deliberately not regenerated during provisioning. matugen runs
+from switchwall.sh, which also sets the live wallpaper and so needs a running
+compositor; provisioning has none. The scheme updates the first time a
+wallpaper is chosen from the shell. `switchwall.sh --noswitch` is the
+candidate for doing it headlessly and is untested.
 
 ### Video wallpaper playback options (parked)
 

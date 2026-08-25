@@ -80,10 +80,10 @@ machine without the file, and for `env.lua` that means no session in the VM.
 
 ## Known open items
 
-- **The ii switch is unrun.** A pre-ii build reached a login; nothing since
-  has been booted. `./setup install -f` completing unattended, the
-  `NOPASSWD: ALL` grant covering it, and `hypr/custom/env.lua` actually
-  being sourced are all reasoning rather than observation.
+- **`hypr/custom/env.lua` may not be doing anything.** The session starts
+  under Hyper-V, but nothing has confirmed that file is what supplies
+  software GL rather than ii doing it another way. `hyprctl getenv` settles
+  it. It also carries the GPU vendor branching real hardware depends on.
 - greetd runs tuigreet, `nyx_packages_aur` is empty, and there is no greeter
   switch. Both launch paths call `start-hyprland`, owned by the `hyprland`
   package.

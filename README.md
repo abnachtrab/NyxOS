@@ -121,7 +121,7 @@ per-machine and never leave it. `gitleaks` runs as a pre-commit hook.
 
 - [x] detect
 - [x] base
-- [x] session_hyprland — reaches a login; the ii switch itself is unrun
+- [x] session_hyprland — installs illogical-impulse and end4-pC, reaches a login
 - [ ] gpu — written, untested on real hardware
 - [ ] branding
 - [ ] backup_rclone
