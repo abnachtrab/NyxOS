@@ -181,6 +181,18 @@
 # The application rewrites this at runtime, so the committed copy is a seed,
 # not a source of truth. It drifts silently as soon as the panel is touched —
 # re-copy it whenever the running state is worth keeping.
+# Picker start directories, referenced by wallpaperSelector.userPath and
+# liveWallpapersPath in config.json. Created so the pickers open somewhere
+# real on a fresh install; the images themselves are not deployed.
+- name: Wallpaper directories
+  ansible.builtin.file:
+    path: "/home/{{ nyx_user }}/{{ item }}"
+    state: directory
+    owner: "{{ nyx_user }}"
+    group: "{{ nyx_user }}"
+    mode: "0755"
+  loop: "{{ nyx_wallpaper_dirs }}"
+
 - name: illogical-impulse directory
   ansible.builtin.file:
     path: "/home/{{ nyx_user }}/.config/illogical-impulse"

@@ -84,6 +84,12 @@ nyx_end4pc_version: "main"
 # Which Quickshell config Hyprland launches. Upstream ships "ii".
 nyx_qs_config: "end4-pC"
 
+# Where the wallpaper pickers start. Static images and video are separate
+# because the Live Wallpaper menu entry passes its own --start-dir.
+nyx_wallpaper_dirs:
+  - Pictures/Wallpapers
+  - Videos/Wallpapers
+
 # Seed ~/.config/illogical-impulse/config.json from the committed template.
 # Set false to let the shell generate its own defaults instead.
 nyx_ii_shell_config: true
