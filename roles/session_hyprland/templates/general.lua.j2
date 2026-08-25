@@ -1,0 +1,11 @@
+-- NyxOS additions, loaded by illogical-impulse from hypr/custom/general.lua.
+--
+-- ii owns everything under hypr/hyprland/; custom/ is the documented seam
+-- and loads after it, so anything here wins. Whatever ii ships at this path
+-- is replaced — custom/ is user territory.
+{% if nyx_end4pc_enabled %}
+
+-- end4-pC's settings panel is an overlay rather than a window, so SUPER+Q
+-- does not close it. The same bind toggles it; Escape also dismisses it.
+hl.bind("SUPER + escape", hl.dsp.global("quickshell:settingsToggle"), {description = "Toggle settings"})
+{% endif %}

@@ -130,6 +130,45 @@
         path: /etc/sudoers.d/zz-nyx-ii-temp
         state: absent
 
+# --- end4-pC --------------------------------------------------------------
+# A Quickshell config that lives alongside ii's rather than replacing it —
+# it needs illogical-impulse installed and running, so this must come after
+# the installer block above.
+- name: Fetch end4-pC
+  ansible.builtin.git:
+    repo: "{{ nyx_end4pc_repo }}"
+    dest: "/home/{{ nyx_user }}/.config/quickshell/end4-pC"
+    version: "{{ nyx_end4pc_version }}"
+  become: true
+  become_user: "{{ nyx_user }}"
+  when: nyx_end4pc_enabled | bool
+
+# Upstream documents editing hypr/hyprland/variables.lua by hand. That file
+# is ii's and ./setup install rsyncs over it, so the edit would not survive a
+# re-run — it is reapplied here instead, after the installer, every play.
+#
+# custom/env.lua would be the tidier home for this, but qsConfig is read when
+# the shell is launched and custom/ loads late; patching the file ii actually
+# reads is the version that is known to work.
+- name: Select the Quickshell config Hyprland launches
+  ansible.builtin.lineinfile:
+    path: "/home/{{ nyx_user }}/.config/hypr/hyprland/variables.lua"
+    regexp: '^\s*hl\.env\("qsConfig"'
+    line: 'hl.env("qsConfig", "{{ nyx_qs_config }}")'
+    owner: "{{ nyx_user }}"
+    group: "{{ nyx_user }}"
+    mode: "0644"
+
+# Binds and general settings. custom/general.lua is one of the files ii
+# documents as loaded from custom/, unlike an arbitrary filename there.
+- name: NyxOS Hyprland general
+  ansible.builtin.template:
+    src: general.lua.j2
+    dest: "/home/{{ nyx_user }}/.config/hypr/custom/general.lua"
+    owner: "{{ nyx_user }}"
+    group: "{{ nyx_user }}"
+    mode: "0644"
+
 # --- NyxOS tweaks ---------------------------------------------------------
 # Copied after ii, so anything here wins. Mirror the ~/.config tree shape
 # under files/ii-overlay/ — e.g. files/ii-overlay/hypr/custom/keybinds.conf.

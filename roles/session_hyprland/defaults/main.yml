@@ -74,6 +74,16 @@ nyx_ii_ignore_group: true
 nyx_ii_setup_log: "/home/{{ nyx_user }}/.cache/nyx-ii-setup.log"
 nyx_ii_setup_timeout: 1800
 
+# pctrade/end4-pC, a Quickshell config that installs alongside ii rather than
+# replacing it — it requires illogical-impulse installed and running, so it
+# is fetched after the installer.
+nyx_end4pc_enabled: true
+nyx_end4pc_repo: "https://github.com/pctrade/end4-pC"
+nyx_end4pc_version: "main"
+
+# Which Quickshell config Hyprland launches. Upstream ships "ii".
+nyx_qs_config: "end4-pC"
+
 # Tweaks layered over ii's config after it is applied, so they win. Anything
 # under files/ii-overlay/ is copied into ~/.config with the same tree shape.
 nyx_ii_overlay: true

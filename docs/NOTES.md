@@ -531,3 +531,30 @@ DNSOverHTTPS is set to Enabled false, which sets network.trr.mode=5. That
 turns DoH off *and* stops Firefox enabling it on its own, so DNS keeps
 reaching the Pi-hole. Locked is omitted, so it can still be switched on by
 hand later.
+
+## end4-pC
+
+A second Quickshell config, from pctrade/end4-pC, cloned into
+`~/.config/quickshell/end4-pC`. It sits beside ii's own rather than
+replacing it, and needs illogical-impulse installed and running, so the role
+fetches it after the installer block.
+
+Which one Hyprland launches is `hl.env("qsConfig", ...)` in
+`hypr/hyprland/variables.lua`. Upstream documents editing that by hand, but
+it is ii's file and `./setup install` rsyncs over it — so the edit is
+reapplied by lineinfile after the installer on every play instead. It
+self-heals rather than surviving.
+
+`custom/env.lua` would be the tidier home for that variable, since custom/
+loads last and would win. It is not used because qsConfig is read when the
+shell launches and custom/ loads late; patching the file ii actually reads is
+the version known to work. Worth revisiting if it turns out custom/ is early
+enough.
+
+The settings panel bind goes in `custom/general.lua` — one of the files ii
+documents as loaded from custom/, unlike an arbitrary filename there. That
+panel is an overlay rather than a window, so SUPER+Q does not close it; the
+same bind toggles it and Escape dismisses it.
+
+`nyx_qs_config` switches back to "ii" in one line, and
+`nyx_end4pc_enabled: false` drops the clone and the bind together.
