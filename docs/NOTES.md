@@ -496,6 +496,22 @@ settable; privacy.* is the restricted one, with five individually permitted
 prefs. And DisableFeedbackCommands is the report-broken-site menus, not
 crash reporting.
 
+Five extensions are installed by policy, every slug confirmed on AMO:
+uBlock Origin, Wayback Machine, Multi-Account Containers, Enhancer for
+YouTube, Dashlane.
+
+The built-in **Containers policy is not set** — Multi-Account Containers
+manages them instead. The two are complementary rather than alternatives:
+the extension is a management UI over the same contextual identities the
+policy would pre-create, so restoring the policy would seed named containers
+with set icons and colours rather than taking the extension defaults.
+ and  are set so
+the underlying feature is on either way.
+
+ is deliberately **false**. The channel that
+delivers remote config also delivers stability and performance fixes between
+releases, and losing those costs more than the callbacks are worth.
+
 **The one value not confirmable from the docs:** SearchEngines.Remove
 matches each engine display name, and Mozilla does not publish the built-in
 set — it varies by version and region. Read the real names off

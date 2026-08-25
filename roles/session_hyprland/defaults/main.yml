@@ -143,11 +143,10 @@ nyx_firefox_policies:
       Enabled: false
     # "Report broken site" menus, which send the URL to Mozilla.
     DisableFeedbackCommands: true
-    # Firefox 148+. Stops remotely-delivered performance, stability and
-    # feature changes being applied between updates. Privacy-forward — fewer
-    # callbacks, no remote reconfiguration — but the same channel also
-    # carries fixes, so this trades some between-release patching for it.
-    DisableRemoteImprovements: true
+    # Firefox 148+. Left ON: the same channel that delivers remote config
+    # also delivers stability and performance fixes between releases, and
+    # losing those costs more than the callbacks are worth.
+    DisableRemoteImprovements: false
 
     # --- advertising and messaging -----------------------------------------
     # Highlights is the "Recent activity" row: kept.
@@ -160,7 +159,7 @@ nyx_firefox_policies:
       TopSites: true
       SponsoredTopSites: false
       Highlights: true
-      Weather: false
+      Weather: true
       Pocket: false
       SponsoredPocket: false
       Stories: false
@@ -265,25 +264,27 @@ nyx_firefox_policies:
       Locked: false
 
     # --- containers --------------------------------------------------------
-    Containers:
-      Default:
-        - name: "Personal"
-          icon: "fingerprint"
-          color: "blue"
-        - name: "Work"
-          icon: "briefcase"
-          color: "orange"
+    # The built-in Containers policy is NOT set: Multi-Account Containers
+    # below manages them instead. Both prefs are individually allowlisted,
+    # and the extension needs the underlying feature switched on.
+    #
+    # Note the two are complementary rather than alternatives — the extension
+    # is a management UI over the same contextual identities the policy would
+    # pre-create. Restoring the policy would seed Personal and Work with set
+    # icons and colours instead of taking the extension's defaults.
 
     # --- extensions --------------------------------------------------------
-    # Both slugs confirmed against addons.mozilla.org. Wayback Machine is the
-    # Internet Archive's own, slug wayback-machine_new.
+    # Every slug confirmed against addons.mozilla.org. A bad URL fails
+    # silently, so check about:policies after first launch.
     Extensions:
       Install:
         - "https://addons.mozilla.org/firefox/downloads/latest/ublock-origin/latest.xpi"
         - "https://addons.mozilla.org/firefox/downloads/latest/wayback-machine_new/latest.xpi"
+        - "https://addons.mozilla.org/firefox/downloads/latest/multi-account-containers/latest.xpi"
+        - "https://addons.mozilla.org/firefox/downloads/latest/enhancer-for-youtube/latest.xpi"
+        - "https://addons.mozilla.org/firefox/downloads/latest/dashlane/latest.xpi"
 
     # --- search ------------------------------------------------------------
-    # Release Firefox has supported this since 139; no longer ESR-only.
     # Remove matches each engine display name. Mozilla does not publish the
     # built-in set and it varies by version and region, so this is the one
     # value here not confirmed from the docs — read the real names off
@@ -299,13 +300,23 @@ nyx_firefox_policies:
 
     # --- prefs -------------------------------------------------------------
     # dom. and browser. are allowed prefixes. privacy.* is not blanket
-    # allowed, but globalprivacycontrol.enabled is individually permitted.
+    # allowed, but these three are individually permitted.
     Preferences:
       "dom.private-attribution.submission.enabled":
         Value: false
         Status: "default"
         Type: "boolean"
       "privacy.globalprivacycontrol.enabled":
+        Value: true
+        Status: "default"
+        Type: "boolean"
+      # Containers themselves, and the container UI Multi-Account Containers
+      # builds on.
+      "privacy.userContext.enabled":
+        Value: true
+        Status: "default"
+        Type: "boolean"
+      "privacy.userContext.ui.enabled":
         Value: true
         Status: "default"
         Type: "boolean"
