@@ -610,3 +610,47 @@ Checked before committing, since the repo is public: no credentials. The
 `key_id`, but no key material. `workSafety.triggerCondition.fileKeywords`
 is ii own NSFW filter list and reads oddly out of context — it is upstream
 default content, not a personal setting.
+
+## Wallpapers, matugen and live wallpapers
+
+`scripts/colors/switchwall.sh` in end4-pC is the single entry point for every
+wallpaper change. It lives under `colors/` because setting a wallpaper is also
+what regenerates the matugen scheme — the two are one operation.
+
+Flags: `--mode` dark/light, `--image`, `--start-dir`, `--type` (scheme
+variant), `--color` (hex or clear), `--noswitch` (reprocess colours without
+changing wallpaper), `--colors_lock`.
+
+It writes the chosen path back into
+`$XDG_CONFIG_HOME/illogical-impulse/config.json` with jq, setting
+`.background.wallpaperPath`. That is the concrete reason the committed
+`config.json.j2` is a seed rather than a source of truth: the shell rewrites
+it on every wallpaper change.
+
+The picker, when no image is given, is **kdialog** — part of why ii pulls the
+KDE stack.
+
+**Live wallpapers are an end4-pC feature.** `liveWallpapersPath` appears
+nowhere under `ii/`. The QML side is thin: the desktop right-click menu has a
+"Live Wallpaper" entry calling `Wallpapers.openFallbackPicker`, which execs
+switchwall.sh with `--start-dir` set to that path. No file-type branching
+happens in QML at all. The script does the real work — it detects mp4, webm,
+mkv, avi and mov, plays them through **mpvpaper**, thumbnails via ffmpeg, and
+writes `__restore_video_wallpaper.sh` so the wallpaper survives a restart.
+
+`mpvpaper` is not in the Arch repos, but CachyOS ships `cachyos/mpvpaper`, so
+it is a plain repo install and `nyx_packages_aur` stays empty. Nothing else
+pulls it in: ii does not know about the feature, and end4-pC is a cloned
+config directory rather than a package, so it declares no dependencies.
+
+### The wallpaper task is wrong
+
+`nyx_hypr_wallpaper` copies an image to `~/.config/background`. Nothing reads
+that path. The shell reads `background.wallpaperPath` from config.json, and
+colours only regenerate when switchwall.sh runs.
+
+Latent so far because the variable is empty and the task is skipped. Setting
+it would silently do nothing. The fix is to point `background.wallpaperPath`
+in the config template at a deployed file, and to regenerate colours —
+`--noswitch` looks like the headless-safe call, since actually displaying a
+wallpaper needs a running compositor and provisioning has none.

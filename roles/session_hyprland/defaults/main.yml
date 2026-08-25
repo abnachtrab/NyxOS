@@ -129,6 +129,15 @@ nyx_hypr_packages_apps:
   # that ignores its flags file.
   - code
   - firefox
+  # Video wallpapers. end4-pC scripts/colors/switchwall.sh plays mp4, webm,
+  # mkv, avi and mov through mpvpaper and thumbnails them with ffmpeg. It is
+  # an end4-pC feature: ii has no reference to it, and end4-pC is a cloned
+  # config directory rather than a package, so it declares no dependencies of
+  # its own and nothing else pulls this in.
+  #
+  # cachyos/mpvpaper, so a plain repo install — nyx_packages_aur stays empty.
+  # ffmpeg arrives transitively as an mpv dependency.
+  - mpvpaper
 
 # ---------------------------------------------------------------------------
 # Firefox enterprise policy
