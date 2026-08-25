@@ -169,6 +169,36 @@
     group: "{{ nyx_user }}"
     mode: "0644"
 
+# Shell settings, as configured through end4-pC own settings panel and then
+# copied back out. end4-pC inherits ii settings path rather than using its
+# own, so this file is shared between the two shells.
+#
+# A template rather than a flat overlay file because it carries absolute
+# paths under the home directory, which have to follow nyx_user. render-check
+# validates the rendered JSON, which is worth having for a 23KB file that is
+# edited by a GUI rather than by hand.
+#
+# The application rewrites this at runtime, so the committed copy is a seed,
+# not a source of truth. It drifts silently as soon as the panel is touched —
+# re-copy it whenever the running state is worth keeping.
+- name: illogical-impulse directory
+  ansible.builtin.file:
+    path: "/home/{{ nyx_user }}/.config/illogical-impulse"
+    state: directory
+    owner: "{{ nyx_user }}"
+    group: "{{ nyx_user }}"
+    mode: "0755"
+  when: nyx_ii_shell_config | bool
+
+- name: Shell settings
+  ansible.builtin.template:
+    src: config.json.j2
+    dest: "/home/{{ nyx_user }}/.config/illogical-impulse/config.json"
+    owner: "{{ nyx_user }}"
+    group: "{{ nyx_user }}"
+    mode: "0644"
+  when: nyx_ii_shell_config | bool
+
 # --- NyxOS tweaks ---------------------------------------------------------
 # Copied after ii, so anything here wins. Mirror the ~/.config tree shape
 # under files/ii-overlay/ — e.g. files/ii-overlay/hypr/custom/keybinds.conf.

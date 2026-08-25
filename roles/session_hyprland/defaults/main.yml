@@ -84,6 +84,10 @@ nyx_end4pc_version: "main"
 # Which Quickshell config Hyprland launches. Upstream ships "ii".
 nyx_qs_config: "end4-pC"
 
+# Seed ~/.config/illogical-impulse/config.json from the committed template.
+# Set false to let the shell generate its own defaults instead.
+nyx_ii_shell_config: true
+
 # Tweaks layered over ii's config after it is applied, so they win. Anything
 # under files/ii-overlay/ is copied into ~/.config with the same tree shape.
 nyx_ii_overlay: true

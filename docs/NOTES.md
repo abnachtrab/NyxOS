@@ -582,3 +582,31 @@ It runs after the user is created and before sshd is hardened. On a VM that
 hardening sets `PasswordAuthentication no`, so a missing or wrong key here
 means no SSH at all — and VMConnect cannot paste, it synthesises keystrokes
 and mangles them.
+
+## Shell settings
+
+end4-pC writes its settings to ii path, `~/.config/illogical-impulse/config.json`,
+not to one of its own — a fork inheriting a hardcoded path. So the two shells
+share one settings file. Flipping `nyx_qs_config` back to "ii" means ii
+reads whatever end4-pC last wrote, which is fine if the schemas match and
+confusing if the fork added keys.
+
+The file is committed as `templates/config.json.j2` rather than dropped in
+the overlay, because it carries absolute paths under the home directory that
+have to follow `nyx_user`. Two of them: the wallpaper, and the screen
+recording save path. render-check validates the rendered JSON, which is worth
+having for a 23KB file edited through a GUI rather than by hand.
+
+**It is a seed, not a source of truth.** The shell rewrites it at runtime, so
+the committed copy drifts the moment the settings panel is touched, and
+nothing reports that. Re-copy it whenever the running state is worth keeping:
+
+    scp <user>@<host>:/home/<user>/.config/illogical-impulse/config.json       roles/session_hyprland/templates/config.json.j2
+
+then re-apply the two `nyx_user` substitutions.
+
+Checked before committing, since the repo is public: no credentials. The
+`ai.extraModels` entries carry endpoint and key-retrieval URLs plus a
+`key_id`, but no key material. `workSafety.triggerCondition.fileKeywords`
+is ii own NSFW filter list and reads oddly out of context — it is upstream
+default content, not a personal setting.
