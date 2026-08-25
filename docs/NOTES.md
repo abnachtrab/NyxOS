@@ -654,3 +654,29 @@ it would silently do nothing. The fix is to point `background.wallpaperPath`
 in the config template at a deployed file, and to regenerate colours —
 `--noswitch` looks like the headless-safe call, since actually displaying a
 wallpaper needs a running compositor and provisioning has none.
+
+### Video wallpaper playback options (parked)
+
+switchwall.sh runs mpvpaper with a hardcoded option string and no
+environment override:
+
+    no-audio loop hwdec=auto scale=bilinear interpolation=no
+    video-sync=display-resample panscan=1.0 video-scale-x=1.0
+    video-scale-y=1.0 video-align-x=0.5 video-align-y=0.5 load-scripts=no
+
+For playback at the display refresh rate rather than the source rate,
+interpolation=no becomes yes. video-sync=display-resample is already set,
+which is the prerequisite; tscale=oversample is a cheaper kernel than the
+default. Nothing can exceed the source framerate without interpolation.
+
+Changing it means editing the script inside the end4-pC clone, which dirties
+the git tree — and ansible.builtin.git refuses to update a repo with local
+modifications, so the next run fails at Fetch end4-pC. The durable form is a
+lineinfile rewriting VIDEO_OPTS after the clone, self-healing like the
+qsConfig patch. Not implemented.
+
+Not worth tuning in the VM: LIBGL_ALWAYS_SOFTWARE means hwdec finds no
+decoder and interpolation runs on llvmpipe. Judge this on hardware.
+
+The restore script it generates, __restore_video_wallpaper.sh, pkills
+mpvpaper and relaunches one instance per monitor from hyprctl monitors -j.
