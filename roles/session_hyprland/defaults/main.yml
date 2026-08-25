@@ -167,9 +167,10 @@ nyx_firefox_policies:
     # Studies is the Shield mechanism that ships experiments to subsets of
     # users without asking. It is how PPA arrived enabled.
     DisableFirefoxStudies: true
-    # An object with an Enabled key, not a bare boolean.
-    CrashReportsSubmit:
-      Enabled: false
+    # CrashReportsSubmit is NOT set. It is in the current admin docs but
+    # about:policies reports "Unknown policy: CrashReportsSubmit" on this
+    # Firefox, so the build predates it. DisableTelemetry covers most of what
+    # it would have done.
     # "Report broken site" menus, which send the URL to Mozilla.
     DisableFeedbackCommands: true
     # Firefox 148+. Left ON: the same channel that delivers remote config
