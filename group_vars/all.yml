@@ -8,6 +8,14 @@ nyx_user:        "abnac"
 nyx_user_groups: [wheel, video, audio, input, storage]
 nyx_url:         "https://github.com/abnachtrab/NyxOS"
 
+# SSH keys for nyx_user. roles/base defaults this to empty because the repo
+# is public; this file is where the real value belongs.
+#
+# On VMs roles/base also sets PasswordAuthentication no, so this is the only
+# way in over SSH there. A wrong key means VMConnect and its keystroke paste.
+nyx_ssh_authorized_keys:
+  - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKR2EiQJNKhdf3P5rsVPC4ba0HUrJFMidNFCedDAb0Il"
+
 # ---------------------------------------------------------------------------
 # Kernel / packages / shell
 # ---------------------------------------------------------------------------

@@ -53,6 +53,17 @@
     update_password: on_create
   when: nyx_password | default('') | length > 0
 
+# After the user exists, and before sshd is hardened below. On a VM that
+# hardening turns off password auth, so a missing key here locks SSH out.
+- name: Authorized SSH keys
+  ansible.posix.authorized_key:
+    user: "{{ nyx_user }}"
+    key: "{{ item }}"
+    state: present
+    exclusive: false
+  loop: "{{ nyx_ssh_authorized_keys }}"
+  when: nyx_ssh_authorized_keys | length > 0
+
 - name: Wheel sudo
   ansible.builtin.copy:
     content: "%wheel ALL=(ALL:ALL) ALL\n"

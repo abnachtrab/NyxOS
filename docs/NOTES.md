@@ -558,3 +558,27 @@ same bind toggles it and Escape dismisses it.
 
 `nyx_qs_config` switches back to "ii" in one line, and
 `nyx_end4pc_enabled: false` drops the clone and the bind together.
+
+## SSH keys
+
+`nyx_ssh_authorized_keys` is defaulted to an empty list in
+`roles/base/defaults` and given its real value in `group_vars/all.yml`.
+
+That split is deliberate. NyxOS is a public repo: a key hardcoded in a role
+would be installed on the machine of anyone who ran this playbook, handing
+its owner SSH access to a stranger box. group_vars is the layer a fork is
+expected to replace, so the role stays safe by construction and a fresh ISO
+install still gets the key with no manual step.
+
+A public key in a public repo is otherwise fine — the private key cannot be
+derived from it, and GitHub already publishes yours at
+`github.com/<user>.keys`. Trim the trailing `user@host` comment if you
+care about leaking a machine name; it is not load-bearing.
+
+The task is not `exclusive`, so keys added by hand on a machine survive.
+Set exclusive if the repo should be the only source of truth.
+
+It runs after the user is created and before sshd is hardened. On a VM that
+hardening sets `PasswordAuthentication no`, so a missing or wrong key here
+means no SSH at all — and VMConnect cannot paste, it synthesises keystrokes
+and mangles them.

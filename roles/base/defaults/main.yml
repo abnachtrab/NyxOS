@@ -1,0 +1,12 @@
+---
+# Public keys installed into nyx_user's authorized_keys.
+#
+# Empty here on purpose. NyxOS is a public repo, and a key hardcoded in a
+# role would be installed on the machine of anyone who ran this playbook —
+# handing the key's owner SSH access to a stranger's box. The real value
+# lives in group_vars/all.yml, which is the layer a fork is expected to
+# replace.
+#
+# Not exclusive: keys added by hand on a machine are left alone. Set
+# exclusive in the task if the repo should be the sole source of truth.
+nyx_ssh_authorized_keys: []
