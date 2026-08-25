@@ -275,6 +275,9 @@ nyx_firefox_policies:
     DisableFirefoxAccounts: true
     PasswordManagerEnabled: false
     DisableFormHistory: true
+    # Dashlane handles both; Firefox own autofill just competes with it.
+    AutofillCreditCardEnabled: false
+    AutofillAddressEnabled: false
 
     # --- annoyances --------------------------------------------------------
     NoDefaultBookmarks: true
