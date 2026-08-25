@@ -245,12 +245,18 @@
     mode: "0644"
 
 # --- wallpaper ------------------------------------------------------------
-# matugen derives the entire scheme from this image. Without it ii falls back
-# to its built-in colours, so this is now load-bearing rather than cosmetic.
+# Deployed into the picker directory and referenced by
+# background.wallpaperPath in config.json above.
+#
+# Colours are NOT regenerated here. matugen runs from
+# end4-pC scripts/colors/switchwall.sh, which also sets the live wallpaper and
+# so needs a running compositor — provisioning has none. The scheme updates
+# the first time a wallpaper is chosen from the shell; `switchwall.sh
+# --noswitch` is the candidate for doing it headlessly, untested.
 - name: Wallpaper
   ansible.builtin.copy:
     src: "{{ nyx_hypr_wallpaper }}"
-    dest: "/home/{{ nyx_user }}/.config/background"
+    dest: "{{ nyx_hypr_wallpaper_path }}"
     owner: "{{ nyx_user }}"
     group: "{{ nyx_user }}"
     mode: "0644"
@@ -259,8 +265,8 @@
 - name: Warn when no wallpaper is set
   ansible.builtin.debug:
     msg: >-
-      nyx_hypr_wallpaper is empty, so matugen has nothing to derive a scheme
-      from and ii keeps its built-in colours. Set it to a real image.
+      nyx_hypr_wallpaper is empty, so config.json keeps ii's bundled default
+      and matugen has nothing of yours to derive a scheme from.
   when: nyx_hypr_wallpaper | length == 0
 
 # --- application config ---------------------------------------------------

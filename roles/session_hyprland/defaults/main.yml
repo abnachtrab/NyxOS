@@ -98,14 +98,24 @@ nyx_ii_shell_config: true
 # under files/ii-overlay/ is copied into ~/.config with the same tree shape.
 nyx_ii_overlay: true
 
-# matugen derives the whole scheme from this image, so unlike the old palette
-# setup it is required rather than optional. An empty value leaves ii on its
-# built-in default colours.
+# Wallpaper. matugen derives the entire colour scheme from this image, so it
+# is load-bearing rather than cosmetic.
 #
-# Resolved by ansible.builtin.copy: a bare name comes from this role's
-# files/, an absolute path from the control machine — which is the target
-# too, since the playbook runs with -c local.
+# Source image, resolved by ansible.builtin.copy: a bare name comes from this
+# role's files/, an absolute path from the control machine — which is the
+# target too, since the playbook runs with -c local. Empty leaves ii's own
+# default in place.
 nyx_hypr_wallpaper: ""
+
+# Where the image is deployed to, and what background.wallpaperPath in
+# config.json is set to. NOT ~/.config/background — nothing reads that path;
+# the shell reads wallpaperPath from config.json and switchwall.sh rewrites
+# it there on every change.
+nyx_hypr_wallpaper_default: "/home/{{ nyx_user }}/.config/quickshell/end4-pC/assets/images/default_wallpaper.png"
+nyx_hypr_wallpaper_path: >-
+  {{ ('/home/' + nyx_user + '/Pictures/Wallpapers/' + (nyx_hypr_wallpaper | basename))
+     if (nyx_hypr_wallpaper | length > 0)
+     else nyx_hypr_wallpaper_default }}
 
 # greetd is the login daemon, tuigreet the greeter. Both from the repos.
 nyx_hypr_dm_packages:

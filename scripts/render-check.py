@@ -44,7 +44,33 @@ def build_env(tdir):
         "true", "1", "yes", "on",
     )
     env.filters["to_nice_json"] = lambda v: json.dumps(v, indent=4, sort_keys=True)
+    env.filters["basename"] = os.path.basename
     return env
+
+
+def resolve_vars(env, ctx, passes=4):
+    """Resolve variables that reference other variables.
+
+    Ansible templates var values recursively, so `nyx_ii_checkout:
+    "/home/{{ nyx_user }}/..."` arrives at a task fully expanded. Rendering a
+    template with the raw dict instead leaves the inner {{ }} intact, which
+    silently produces output that looks fine and is wrong. Iterate until
+    nothing changes.
+    """
+    for _ in range(passes):
+        changed = False
+        for key, value in list(ctx.items()):
+            if isinstance(value, str) and "{{" in value:
+                try:
+                    rendered = env.from_string(value).render(**ctx)
+                except Exception:  # noqa: BLE001 - unresolvable here is fine
+                    continue
+                if rendered != value:
+                    ctx[key] = rendered
+                    changed = True
+        if not changed:
+            break
+    return ctx
 
 
 def templates_in(tdir):
@@ -101,7 +127,8 @@ def main():
             continue
 
         for pname, profile in profiles.items():
-            ctx = {**group_vars, **defaults, "nyx_profile": profile}
+            ctx = resolve_vars(env, {**group_vars, **defaults,
+                                     "nyx_profile": profile})
             for name in names:
                 try:
                     out = env.get_template(name).render(**ctx)
