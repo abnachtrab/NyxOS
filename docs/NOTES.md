@@ -512,10 +512,15 @@ the underlying feature is on either way.
 delivers remote config also delivers stability and performance fixes between
 releases, and losing those costs more than the callbacks are worth.
 
-**The one value not confirmable from the docs:** SearchEngines.Remove
-matches each engine display name, and Mozilla does not publish the built-in
-set — it varies by version and region. Read the real names off
-about:preferences#search if an engine survives.
+`SearchEngines.Remove` matches each engine's display name, which Mozilla does
+not publish. It was read off `about:preferences#search` on a real install
+rather than guessed: the set is Bing, DuckDuckGo, Perplexity and
+Wikipedia (en). Amazon.com and eBay are no longer shipped; Perplexity is new.
+
+A `Remove` entry that matches nothing is silently ignored — removing an
+absent engine is a legitimate no-op, not a policy error — so
+`about:policies` will not flag a stale name. That page cannot verify this
+value; only the preferences page can.
 
 about:policies after first launch shows what applied and what was rejected.
 A misspelled key is ignored, not reported.

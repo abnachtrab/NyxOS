@@ -285,17 +285,20 @@ nyx_firefox_policies:
         - "https://addons.mozilla.org/firefox/downloads/latest/dashlane/latest.xpi"
 
     # --- search ------------------------------------------------------------
-    # Remove matches each engine display name. Mozilla does not publish the
-    # built-in set and it varies by version and region, so this is the one
-    # value here not confirmed from the docs — read the real names off
-    # about:preferences#search and correct it if an engine survives.
+    # Remove matches each engine's display name. Mozilla does not publish the
+    # built-in set, so this list was read off about:preferences#search on a
+    # real install rather than guessed: Amazon.com and eBay are no longer
+    # shipped, and Perplexity now is.
+    #
+    # A Remove entry that matches nothing is silently ignored — it is not a
+    # policy error, so about:policies will not flag a stale name here. If the
+    # set changes again, re-read it from that page.
     SearchEngines:
       Default: "Google"
       Remove:
         - "Bing"
         - "DuckDuckGo"
-        - "Amazon.com"
-        - "eBay"
+        - "Perplexity"
         - "Wikipedia (en)"
 
     # --- prefs -------------------------------------------------------------
