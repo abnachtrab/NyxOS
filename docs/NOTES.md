@@ -505,10 +505,10 @@ manages them instead. The two are complementary rather than alternatives:
 the extension is a management UI over the same contextual identities the
 policy would pre-create, so restoring the policy would seed named containers
 with set icons and colours rather than taking the extension defaults.
- and  are set so
+`privacy.userContext.enabled` and `privacy.userContext.ui.enabled` are set so
 the underlying feature is on either way.
 
- is deliberately **false**. The channel that
+`DisableRemoteImprovements` is deliberately **false**. The channel that
 delivers remote config also delivers stability and performance fixes between
 releases, and losing those costs more than the callbacks are worth.
 
