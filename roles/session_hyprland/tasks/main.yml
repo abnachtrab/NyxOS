@@ -292,13 +292,19 @@
     state: directory
     mode: "0755"
   when: "'firefox' in nyx_hypr_packages_apps"
+  tags: [firefox]
 
+# Tagged so the policy can be reapplied on its own:
+#   ansible-playbook site.yml --tags firefox --ask-become-pass
+# Firefox reads this at startup, so it needs a browser restart, not a
+# reinstall.
 - name: Firefox policies
   ansible.builtin.template:
     src: policies.json.j2
     dest: /etc/firefox/policies/policies.json
     mode: "0644"
   when: "'firefox' in nyx_hypr_packages_apps"
+  tags: [firefox]
 
 # Without an explicit preference the portal backend is chosen by whichever
 # .portal file sorts first, which breaks screenshare non-deterministically.
