@@ -714,6 +714,12 @@ Two things it does *not* tell you, both of which cost time here:
   profile, but anything changed by hand afterwards wins and the policy sits
   underneath doing nothing. A setting that "did not apply" is often one that
   was clicked later.
+
+  Confirmed by reapplying the policy on a running install: every value moved
+  to match except the one that had been changed manually, which kept the hand
+  set value. To recover one of those, either set it in the UI to the value
+  you want — it then agrees and stays — or reset the underlying pref in
+  about:config so the policy default applies again.
 - `#active` shows the value Firefox parsed, not the value in effect. Those
   differ whenever the point above applies.
 
