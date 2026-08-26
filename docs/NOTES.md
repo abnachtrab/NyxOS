@@ -800,6 +800,15 @@ That is the reason `nyx_packages_aur` is no longer empty. It is conditional —
 on machines that asked for remote access. No repo packages a VNC or RDP
 server for Hyprland, so there was no way to have this and an empty AUR list.
 
+**Do not forward to port 3389 on the client.** Windows Remote Desktop listens
+on `0.0.0.0:3389`, which already covers `127.0.0.1:3389`, so `ssh -L 3389:...`
+cannot bind — and mstsc pointed at `localhost:3389` then reaches the client
+machine itself and reports "you already have a console session in progress",
+which reads like a server problem and is not one. `nyx_rdp_local_port` is
+13389 for that reason:
+
+    ssh -L 13389:localhost:3389 <user>@<host>
+
 **The password is not in the repo.** `nyx_rdp_password` defaults to empty and
 the config file is only written when it has a value, at mode 0600. Supply it
 with `-e nyx_rdp_password=...` or from `host_vars/`, which `.gitignore`

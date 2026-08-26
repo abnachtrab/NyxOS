@@ -13,7 +13,8 @@ nyx-headless up "$RES"
 output=$(nyx-headless name)
 
 echo "serving ${output} on {{ nyx_rdp_bind }}:{{ nyx_rdp_port }}"
-echo "from a client:  ssh -L {{ nyx_rdp_port }}:localhost:{{ nyx_rdp_port }} {{ nyx_user }}@$(hostname)"
+echo "from a client:  ssh -L {{ nyx_rdp_local_port }}:localhost:{{ nyx_rdp_port }} {{ nyx_user }}@$(hostname)"
+echo "then RDP to:    localhost:{{ nyx_rdp_local_port }}"
 
 # Remove the output again when the server exits, so a disconnected session
 # does not leave a phantom monitor behind.

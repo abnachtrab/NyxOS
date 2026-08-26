@@ -61,7 +61,8 @@
   ansible.builtin.debug:
     msg:
       - "Desktop:  nyx-rdp            (creates the output, serves it, cleans up on exit)"
-      - "          client:  ssh -L {{ nyx_rdp_port }}:localhost:{{ nyx_rdp_port }} {{ nyx_user }}@<host>"
-      - "          then any RDP client to localhost:{{ nyx_rdp_port }} - mstsc on Windows"
+      - "          client:  ssh -L {{ nyx_rdp_local_port }}:localhost:{{ nyx_rdp_port }} {{ nyx_user }}@<host>"
+      - "          then any RDP client to localhost:{{ nyx_rdp_local_port }} - mstsc on Windows"
+      - "          not 3389 locally: Windows own RDP already holds that port"
       - "Games:    https://localhost:{{ nyx_remote_sunshine_ui_port }}, prep do/undo:"
       - "          /usr/local/bin/nyx-headless up  /  /usr/local/bin/nyx-headless down"

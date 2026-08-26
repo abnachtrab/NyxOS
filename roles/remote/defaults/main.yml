@@ -28,16 +28,20 @@ nyx_remote_resolution: "1920x1080"
 nyx_remote_refresh: 60
 
 # --- hypr-rdp -------------------------------------------------------------
-# Binds to localhost, so reaching it means an SSH tunnel:
-#
-#   ssh -L 3389:localhost:3389 <user>@<host>
-#
-# then point any RDP client at localhost:3389. RDP encrypts itself, unlike
-# VNC, so this is defence in depth rather than the only protection — but it
-# still means no extra port is exposed. Change it to 0.0.0.0 only when
-# something else provides the perimeter, such as Tailscale or WireGuard.
+# Binds to localhost, so reaching it means an SSH tunnel. RDP encrypts
+# itself, unlike VNC, so that is defence in depth rather than the only
+# protection — but it still means no extra port is exposed. Change the bind
+# to 0.0.0.0 only when something else provides the perimeter, such as
+# Tailscale or WireGuard.
 nyx_rdp_bind: "127.0.0.1"
 nyx_rdp_port: 3389
+
+# The port to forward to on the CLIENT, which must not be 3389. Windows
+# Remote Desktop listens on 0.0.0.0:3389, which already covers
+# 127.0.0.1:3389 — so `ssh -L 3389:...` cannot bind, and mstsc pointed at
+# localhost:3389 reaches the client machine itself and reports "you already
+# have a console session in progress".
+nyx_rdp_local_port: 13389
 nyx_rdp_username: "{{ nyx_user }}"
 
 # NOT set here, and it must not be: this repo is public. Supply it at run
