@@ -70,6 +70,14 @@ nyx_packages_base:
 nyx_packages_aur: []
 
 # ---------------------------------------------------------------------------
+# Remote access (roles/remote)
+# ---------------------------------------------------------------------------
+# wayvnc for the desktop, sunshine for anything that moves, both on a headless
+# output so a client gets its own resolution. Enabling this also turns on
+# sshd everywhere, since wayvnc is reached through an SSH tunnel.
+nyx_remote_enabled: true
+
+# ---------------------------------------------------------------------------
 # Backup (roles/backup_rclone)
 # ---------------------------------------------------------------------------
 nyx_rclone_remote:   "onedrive"     # `rclone config` name — configured manually
