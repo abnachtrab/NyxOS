@@ -64,10 +64,15 @@ nyx_packages_base:
   - unzip
   - 7zip
 
-# Currently empty. Keep it short if it grows again: this is the least
-# reproducible layer, and one failing build aborts the whole run, which is
-# deliberate.
-nyx_packages_aur: []
+# Keep this short: it is the least reproducible layer, and one failing build
+# aborts the whole run, which is deliberate.
+#
+# hypr-rdp is the only entry, and only when remote access is on. It is AUR
+# because no repo packages it — there is no VNC or RDP server for Hyprland in
+# extra or cachyos. The alternative was wayvnc, which is a repo package but
+# has no audio, no hardware encoding, and needs a third-party client on every
+# platform.
+nyx_packages_aur: "{{ ['hypr-rdp'] if (nyx_remote_enabled | default(false) | bool) else [] }}"
 
 # ---------------------------------------------------------------------------
 # Remote access (roles/remote)

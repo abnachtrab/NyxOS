@@ -1,11 +1,15 @@
 ---
-# wayvnc and sunshine, both pointed at a headless output so a client gets its
-# own resolution rather than a scaled 5120x1440.
+# hypr-rdp and sunshine, both pointed at a headless output so a client gets
+# its own resolution rather than a scaled 5120x1440.
 #
-# Neither server is started here. Both attach to a running compositor, which
-# does not exist during provisioning, and ii deliberately does not use uwsm —
-# so there is no graphical-session.target for a systemd user unit to hang
-# off. Start them from the session once it is up; see docs/NOTES.md.
+# hypr-rdp itself is installed by roles/base from nyx_packages_aur — the AUR
+# machinery, the helper bootstrap and the temporary sudoers grant all live
+# there, and duplicating them here would mean two grants to revoke.
+#
+# Neither server is started by this role. Both attach to a running
+# compositor, which does not exist during provisioning, and ii deliberately
+# does not use uwsm — so there is no graphical-session.target for a systemd
+# user unit to hang off.
 
 - name: Remote access packages
   community.general.pacman:
@@ -18,30 +22,46 @@
     dest: /usr/local/bin/nyx-headless
     mode: "0755"
 
-- name: wayvnc config directory
+- name: RDP launcher
+  ansible.builtin.template:
+    src: nyx-rdp.j2
+    dest: /usr/local/bin/nyx-rdp
+    mode: "0755"
+
+- name: hypr-rdp config directory
   ansible.builtin.file:
-    path: "/home/{{ nyx_user }}/.config/wayvnc"
+    path: "/home/{{ nyx_user }}/.config/hypr-rdp"
     state: directory
     owner: "{{ nyx_user }}"
     group: "{{ nyx_user }}"
-    mode: "0755"
+    mode: "0700"
 
-- name: wayvnc config
+# 0600 and only when a password was supplied. The repo is public, so
+# nyx_rdp_password is empty in defaults and has to come from -e or from
+# host_vars/, which .gitignore excludes.
+- name: hypr-rdp config
   ansible.builtin.template:
-    src: wayvnc-config.j2
-    dest: "/home/{{ nyx_user }}/.config/wayvnc/config"
+    src: hypr-rdp.toml.j2
+    dest: "/home/{{ nyx_user }}/.config/hypr-rdp/config.toml"
     owner: "{{ nyx_user }}"
     group: "{{ nyx_user }}"
-    mode: "0644"
+    mode: "0600"
+  when: nyx_rdp_password | length > 0
+  no_log: true
 
-# sunshine is configured through its own web UI on first run, including the
-# prep commands that call nyx-headless. Not automated: its config format has
-# not been verified, and writing one blind is how a silently-ignored file
-# happens.
+- name: Warn when no RDP password is set
+  ansible.builtin.debug:
+    msg: >-
+      nyx_rdp_password is empty, so no hypr-rdp config was written. Supply it
+      with -e nyx_rdp_password=... or from host_vars/, which is gitignored.
+      Without it hypr-rdp has no credentials to accept.
+  when: nyx_rdp_password | length == 0
+
 - name: How to finish setting this up
   ansible.builtin.debug:
     msg:
-      - "Desktop:  nyx-headless up && wayvnc --config ~/.config/wayvnc/config"
-      - "          then from the client: ssh -L {{ nyx_remote_vnc_port }}:localhost:{{ nyx_remote_vnc_port }} {{ nyx_user }}@<host>"
-      - "Games:    open https://localhost:{{ nyx_remote_sunshine_ui_port }} and set"
-      - "          prep do: /usr/local/bin/nyx-headless up, undo: /usr/local/bin/nyx-headless down"
+      - "Desktop:  nyx-rdp            (creates the output, serves it, cleans up on exit)"
+      - "          client:  ssh -L {{ nyx_rdp_port }}:localhost:{{ nyx_rdp_port }} {{ nyx_user }}@<host>"
+      - "          then any RDP client to localhost:{{ nyx_rdp_port }} - mstsc on Windows"
+      - "Games:    https://localhost:{{ nyx_remote_sunshine_ui_port }}, prep do/undo:"
+      - "          /usr/local/bin/nyx-headless up  /  /usr/local/bin/nyx-headless down"

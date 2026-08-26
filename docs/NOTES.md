@@ -756,60 +756,72 @@ not a fleet — but it is the lever if a policy keeps losing to manual changes.
 
 ## Remote access
 
-`roles/remote`, off by default (`nyx_remote_enabled`). Two servers pointed at
-one headless output.
+`roles/remote`, gated on `nyx_remote_enabled`. Two servers pointed at one
+headless output.
 
 The headless output is the whole point. The physical display is 5120x1440 and
 a laptop or phone is not, so mirroring it scales badly in both directions. A
 headless output is a monitor that exists only over the network, at whatever
 size the client actually has. `/usr/local/bin/nyx-headless up|down|name`
-creates and removes it.
+creates and removes it; `nyx-rdp` wraps that plus the server and tears the
+output down on exit.
 
 Hyprland assigns the output name — `HEADLESS-2` and so on — rather than
 accepting one, so the script discovers it by diffing `hyprctl monitors -j`
 before and after `hyprctl output create headless`. Creation is asynchronous,
-so it polls rather than sleeping a fixed amount.
+so it polls rather than sleeping a fixed amount. The name being dynamic is
+also why `output` is passed to hypr-rdp on the command line rather than
+pinned in its config file.
 
 Two things the first version got wrong, both about hyprctl outside a session.
 It prints `HYPRLAND_INSTANCE_SIGNATURE not set!` as plain text on stdout and
 still exits 0, so piping it to jq produced `Invalid numeric literal at line
 1, column 28` rather than anything useful. The script now checks the shape of
-the output before parsing, and reports what hyprctl actually said.
+the output before parsing, and reports what hyprctl actually said. It also
+finds the running instance itself from `$XDG_RUNTIME_DIR/hypr` rather than
+requiring three exported variables — which matters because sunshine prep
+commands run with none of the session environment.
 
-It also finds the running instance itself, from `$XDG_RUNTIME_DIR/hypr`,
-rather than requiring three environment variables to be exported. That makes
-it work over SSH, where none of the session environment exists — which
-matters because sunshine prep commands and any remote start-up run in exactly
-that context.
+### RDP rather than VNC
 
-**wayvnc** (extra) serves the desktop. Bound to `127.0.0.1` deliberately:
-VNC's own authentication is weak, sshd here is key-only, so the tunnel
-carries the encryption and nothing extra is exposed.
+This started as wayvnc, which is a repo package. It was replaced by
+**hypr-rdp** — AUR, MIT, Rust on IronRDP — because VNC loses on every axis
+that matters here: no audio, no hardware encoding, frame diffing instead of
+H.264, and a third-party client needed on every platform. RDP clients ship
+with Windows and macOS and are first-party on iOS and Android, which is the
+whole "any random device" requirement.
 
-    ssh -L 5900:localhost:5900 <user>@<host>
+hypr-rdp captures through `wlr-screencopy-v1` and `ext-image-copy-capture-v1`,
+encodes H.264 through VA-API with an OpenH264 fallback, forwards audio over
+PipeWire via RDPSND, and syncs the clipboard both ways.
 
-Low bandwidth, latency-tolerant, clients everywhere. Poor for motion.
+That is the reason `nyx_packages_aur` is no longer empty. It is conditional —
+`['hypr-rdp'] if nyx_remote_enabled else []` — so the AUR surface exists only
+on machines that asked for remote access. No repo packages a VNC or RDP
+server for Hyprland, so there was no way to have this and an empty AUR list.
 
-**sunshine** (cachyos) serves anything that moves, hardware-encoded, with
-Moonlight clients on phones, tablets, Steam Deck and TVs. It brings its own
-TLS and PIN pairing so it does not need the tunnel.
+**The password is not in the repo.** `nyx_rdp_password` defaults to empty and
+the config file is only written when it has a value, at mode 0600. Supply it
+with `-e nyx_rdp_password=...` or from `host_vars/`, which `.gitignore`
+excludes. Binding is `127.0.0.1` so an SSH tunnel is still the transport —
+RDP encrypts itself, unlike VNC, so that is defence in depth rather than the
+only protection.
 
-Sunshine is configured through its web UI at `https://localhost:47990` on
-first run, including the prep commands:
+**sunshine** (cachyos) stays for anything where latency is the point, with
+Moonlight clients on phones, tablets, Steam Deck and TVs. Its own TLS and PIN
+pairing mean it does not need the tunnel. Configured through a web UI at
+`https://localhost:47990` on first run, including the prep commands:
 
     do:   /usr/local/bin/nyx-headless up
     undo: /usr/local/bin/nyx-headless down
 
-That means the output exists only while a stream does, and Moonlight's
-requested resolution can be passed to `up` rather than hardcoding one.
 Deliberately not automated: sunshine's config format has not been verified
 here, and writing one blind is exactly how a silently-ignored file happens.
 
 **Neither server is started by the role.** Both attach to a running
-compositor, which does not exist during provisioning. ii also deliberately
+compositor, which does not exist during provisioning, and ii deliberately
 does not use uwsm, so there is no `graphical-session.target` for a systemd
-user unit to hang off — starting them wants ii's own autostart or a manual
-launch, not a unit file written blind.
+user unit to hang off.
 
 `roles/base` used to enable sshd on VMs only, which left a physical machine
 with no way in at all. It is now `nyx_sshd_enabled`, defaulting to
@@ -820,10 +832,12 @@ WireGuard — is the right layer rather than forwarding ports. Not provisioned.
 
 ### Untested
 
-The games half cannot be evaluated in the VM: sunshine wants hardware
-encoding and Hyper-V has no GPU. Software encode would run and tell you
-nothing about latency. Same bucket as `roles/gpu` — written from
-documentation, to be proven on metal.
+None of this has been run. hypr-rdp appeared around March 2026 and its
+maturity is unknown; whether it works against this Hyprland version is the
+first thing to find out.
 
-The desktop half is testable in the VM, software-rendered and slow but
-functionally real. `nyx-headless up` then `wayvnc` is the check.
+The games half cannot be evaluated in the VM at all: sunshine wants hardware
+encoding and Hyper-V has no GPU. hypr-rdp has the same problem — VA-API with
+no GPU falls back to OpenH264 software encoding, which will run and will tell
+you nothing about quality or latency. Both belong in the same bucket as
+`roles/gpu`: written from documentation, to be proven on metal.

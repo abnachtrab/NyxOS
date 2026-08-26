@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Bring up the headless output and serve it over RDP.
+#
+#   nyx-rdp [WIDTHxHEIGHT]
+#
+# Rendered by roles/remote. The output name is assigned by Hyprland, so it
+# cannot be pinned in config.toml and is passed on the command line instead.
+set -euo pipefail
+
+RES="${1:-{{ nyx_remote_resolution }}}"
+
+nyx-headless up "$RES"
+output=$(nyx-headless name)
+
+echo "serving ${output} on {{ nyx_rdp_bind }}:{{ nyx_rdp_port }}"
+echo "from a client:  ssh -L {{ nyx_rdp_port }}:localhost:{{ nyx_rdp_port }} {{ nyx_user }}@$(hostname)"
+
+# Remove the output again when the server exits, so a disconnected session
+# does not leave a phantom monitor behind.
+trap 'nyx-headless down >/dev/null 2>&1 || true' EXIT
+
+exec hypr-rdp --output "$output" --resolution "$RES"

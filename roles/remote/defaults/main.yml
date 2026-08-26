@@ -6,39 +6,57 @@
 # A headless output is a monitor that exists only over the network, at
 # whatever size the client actually has.
 #
-#   wayvnc   — the whole desktop, low bandwidth, latency-tolerant. Terminal,
-#              browser, editing. Poor for motion.
-#   sunshine — hardware-encoded video for anything that moves. Moonlight
-#              clients exist on phones, tablets, Steam Deck, TVs.
+#   hypr-rdp — the whole desktop over RDP. Hardware H.264 through VA-API,
+#              PipeWire audio, bidirectional clipboard, and a client already
+#              installed on Windows, macOS, iOS and Android.
+#   sunshine — for anything where latency is the point. Moonlight clients on
+#              phones, tablets, Steam Deck, TVs.
 #
-# Both are repo packages: wayvnc from extra, sunshine from cachyos. Neither
-# reopens nyx_packages_aur.
+# RDP replaced wayvnc here: VNC has no audio, no hardware encoding, and needs
+# a third-party client on every platform.
 
 nyx_remote_enabled: false
 
+# hypr-rdp is AUR-only. It is the reason nyx_packages_aur is no longer empty;
+# see group_vars/all.yml. sunshine is cachyos, so it stays a repo install.
 nyx_remote_packages:
-  - wayvnc
   - sunshine
 
-# Size of the virtual screen. Match the client that will use it most, or
-# leave it and let sunshine override per stream — Moonlight asks for a
-# resolution and sunshine's prep commands can create the output to match.
+# Size of the virtual screen. RDP negotiates resolution with the client, so
+# this is the initial size rather than a hard limit.
 nyx_remote_resolution: "1920x1080"
 nyx_remote_refresh: 60
 
-# wayvnc binds to localhost only. Reaching it means an SSH tunnel:
+# --- hypr-rdp -------------------------------------------------------------
+# Binds to localhost, so reaching it means an SSH tunnel:
 #
-#   ssh -L 5900:localhost:5900 <user>@<host>
+#   ssh -L 3389:localhost:3389 <user>@<host>
 #
-# That is deliberate. VNC's own authentication is weak, sshd here is already
-# key-only, and this exposes no additional port. Change the address only if
-# something else is providing the encryption — Tailscale, WireGuard.
-nyx_remote_vnc_address: "127.0.0.1"
-nyx_remote_vnc_port: 5900
+# then point any RDP client at localhost:3389. RDP encrypts itself, unlike
+# VNC, so this is defence in depth rather than the only protection — but it
+# still means no extra port is exposed. Change it to 0.0.0.0 only when
+# something else provides the perimeter, such as Tailscale or WireGuard.
+nyx_rdp_bind: "127.0.0.1"
+nyx_rdp_port: 3389
+nyx_rdp_username: "{{ nyx_user }}"
 
-# Sunshine brings its own TLS and PIN pairing, so it does not need the
-# tunnel. Its ports are a documented range rather than one number, and it is
-# configured through a web UI on first run at https://localhost:47990 —
-# including the prep commands that create and destroy the headless output.
-# That first-run configuration is not automated here.
+# NOT set here, and it must not be: this repo is public. Supply it at run
+# time, or from host_vars/, which .gitignore excludes:
+#
+#   ansible-playbook site.yml -e nyx_rdp_password='...'
+#
+# The config file is written 0600 and only when this has a value.
+nyx_rdp_password: ""
+
+# 30 is upstream's default. Quality is H.264 qp, lower being better.
+nyx_rdp_fps: 60
+nyx_rdp_bitrate: 20000000
+nyx_rdp_quality: 23
+
+# --- sunshine -------------------------------------------------------------
+# Brings its own TLS and PIN pairing, so it does not need the tunnel. Its
+# ports are a documented range rather than one number, and it is configured
+# through a web UI on first run at https://localhost:47990 — including the
+# prep commands that create and destroy the headless output. That first-run
+# configuration is not automated here.
 nyx_remote_sunshine_ui_port: 47990

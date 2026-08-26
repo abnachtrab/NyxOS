@@ -46,7 +46,7 @@ roles/detect/         facts only, never mutates
 roles/base/           repos, packages, user, AUR helper, sshd
 roles/gpu/            chwd autoconfigure, NVIDIA userspace, early KMS
 roles/session_hyprland/  installs illogical-impulse, layers tweaks, login
-roles/remote/         wayvnc + sunshine on a headless output (opt-in)
+roles/remote/         hypr-rdp + sunshine on a headless output (opt-in)
 roles/branding/       os-release et al (stub)
 roles/backup_rclone/  OneDrive sync via systemd timer (stub)
 profiles/             override dicts for untestable hardware
