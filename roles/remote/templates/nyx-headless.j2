@@ -13,29 +13,58 @@
 # so it has to be discovered by diffing the monitor list before and after.
 set -euo pipefail
 
-STATE="${XDG_RUNTIME_DIR:-/tmp}/nyx-headless.name"
-RES="${2:-{{ nyx_remote_resolution }}}"
 HZ="{{ nyx_remote_refresh }}"
 
-monitors() { hyprctl monitors -j | jq -r '.[].name' | sort; }
+# Over SSH none of the session environment is set, so hyprctl prints
+# "HYPRLAND_INSTANCE_SIGNATURE not set!" and anything piping it to jq dies
+# with a parse error instead of a useful message. Find the running instance
+# rather than requiring the caller to export three variables.
+if [[ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]]; then
+    export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+    sig=$(ls -1t "${XDG_RUNTIME_DIR}/hypr" 2>/dev/null | head -1 || true)
+    if [[ -z "$sig" ]]; then
+        echo "no Hyprland instance found under ${XDG_RUNTIME_DIR}/hypr" >&2
+        echo "is the session running, and is this the user that owns it?" >&2
+        exit 1
+    fi
+    export HYPRLAND_INSTANCE_SIGNATURE="$sig"
+fi
+
+STATE="${XDG_RUNTIME_DIR:-/tmp}/nyx-headless.name"
+
+# hyprctl reports failure on stdout as plain text and still exits 0, so check
+# the shape of the output rather than the exit status.
+hypr_json() {
+    local out
+    out=$(hyprctl "$@" -j 2>&1) || true
+    if [[ "${out:0:1}" != "[" && "${out:0:1}" != "{" ]]; then
+        echo "hyprctl $* did not return JSON:" >&2
+        echo "  ${out}" >&2
+        exit 1
+    fi
+    printf '%s' "$out"
+}
+
+monitors() { hypr_json monitors | jq -r '.[].name' | sort; }
 
 case "${1:-}" in
   up)
+    RES="${2:-{{ nyx_remote_resolution }}}"
     if [[ -s "$STATE" ]] && monitors | grep -qx "$(cat "$STATE")"; then
       echo "already up: $(cat "$STATE")"
       exit 0
     fi
     before=$(monitors)
     hyprctl output create headless >/dev/null
-    # Hyprland creates the output asynchronously; poll rather than sleep a
-    # fixed amount, which is either too short or wasted time.
+    # Creation is asynchronous, so poll rather than sleeping a fixed amount
+    # that is either too short or wasted time.
+    name=""
     for _ in {1..20}; do
-      after=$(monitors)
-      name=$(comm -13 <(echo "$before") <(echo "$after") | head -1)
+      name=$(comm -13 <(echo "$before") <(monitors) | head -1)
       [[ -n "$name" ]] && break
       sleep 0.1
     done
-    if [[ -z "${name:-}" ]]; then
+    if [[ -z "$name" ]]; then
       echo "no new output appeared after 'hyprctl output create headless'" >&2
       exit 1
     fi

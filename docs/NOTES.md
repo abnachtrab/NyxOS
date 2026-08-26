@@ -770,6 +770,18 @@ accepting one, so the script discovers it by diffing `hyprctl monitors -j`
 before and after `hyprctl output create headless`. Creation is asynchronous,
 so it polls rather than sleeping a fixed amount.
 
+Two things the first version got wrong, both about hyprctl outside a session.
+It prints `HYPRLAND_INSTANCE_SIGNATURE not set!` as plain text on stdout and
+still exits 0, so piping it to jq produced `Invalid numeric literal at line
+1, column 28` rather than anything useful. The script now checks the shape of
+the output before parsing, and reports what hyprctl actually said.
+
+It also finds the running instance itself, from `$XDG_RUNTIME_DIR/hypr`,
+rather than requiring three environment variables to be exported. That makes
+it work over SSH, where none of the session environment exists — which
+matters because sunshine prep commands and any remote start-up run in exactly
+that context.
+
 **wayvnc** (extra) serves the desktop. Bound to `127.0.0.1` deliberately:
 VNC's own authentication is weak, sshd here is key-only, so the tunnel
 carries the encryption and nothing extra is exposed.
