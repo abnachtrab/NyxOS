@@ -1,0 +1,44 @@
+---
+# Remote access to the desktop, in two shapes that share one virtual screen.
+#
+# The point of the headless output is resolution independence: the physical
+# display is 5120x1440 and a client is not, so mirroring it scales badly.
+# A headless output is a monitor that exists only over the network, at
+# whatever size the client actually has.
+#
+#   wayvnc   — the whole desktop, low bandwidth, latency-tolerant. Terminal,
+#              browser, editing. Poor for motion.
+#   sunshine — hardware-encoded video for anything that moves. Moonlight
+#              clients exist on phones, tablets, Steam Deck, TVs.
+#
+# Both are repo packages: wayvnc from extra, sunshine from cachyos. Neither
+# reopens nyx_packages_aur.
+
+nyx_remote_enabled: false
+
+nyx_remote_packages:
+  - wayvnc
+  - sunshine
+
+# Size of the virtual screen. Match the client that will use it most, or
+# leave it and let sunshine override per stream — Moonlight asks for a
+# resolution and sunshine's prep commands can create the output to match.
+nyx_remote_resolution: "1920x1080"
+nyx_remote_refresh: 60
+
+# wayvnc binds to localhost only. Reaching it means an SSH tunnel:
+#
+#   ssh -L 5900:localhost:5900 <user>@<host>
+#
+# That is deliberate. VNC's own authentication is weak, sshd here is already
+# key-only, and this exposes no additional port. Change the address only if
+# something else is providing the encryption — Tailscale, WireGuard.
+nyx_remote_vnc_address: "127.0.0.1"
+nyx_remote_vnc_port: 5900
+
+# Sunshine brings its own TLS and PIN pairing, so it does not need the
+# tunnel. Its ports are a documented range rather than one number, and it is
+# configured through a web UI on first run at https://localhost:47990 —
+# including the prep commands that create and destroy the headless output.
+# That first-run configuration is not automated here.
+nyx_remote_sunshine_ui_port: 47990

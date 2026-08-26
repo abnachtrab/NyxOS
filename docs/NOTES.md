@@ -753,3 +753,65 @@ Two things it does *not* tell you, both of which cost time here:
 `Locked: true` removes that ambiguity by greying the setting out, at the cost
 of not being able to change it at all. Not used here — this is one machine,
 not a fleet — but it is the lever if a policy keeps losing to manual changes.
+
+## Remote access
+
+`roles/remote`, off by default (`nyx_remote_enabled`). Two servers pointed at
+one headless output.
+
+The headless output is the whole point. The physical display is 5120x1440 and
+a laptop or phone is not, so mirroring it scales badly in both directions. A
+headless output is a monitor that exists only over the network, at whatever
+size the client actually has. `/usr/local/bin/nyx-headless up|down|name`
+creates and removes it.
+
+Hyprland assigns the output name — `HEADLESS-2` and so on — rather than
+accepting one, so the script discovers it by diffing `hyprctl monitors -j`
+before and after `hyprctl output create headless`. Creation is asynchronous,
+so it polls rather than sleeping a fixed amount.
+
+**wayvnc** (extra) serves the desktop. Bound to `127.0.0.1` deliberately:
+VNC's own authentication is weak, sshd here is key-only, so the tunnel
+carries the encryption and nothing extra is exposed.
+
+    ssh -L 5900:localhost:5900 <user>@<host>
+
+Low bandwidth, latency-tolerant, clients everywhere. Poor for motion.
+
+**sunshine** (cachyos) serves anything that moves, hardware-encoded, with
+Moonlight clients on phones, tablets, Steam Deck and TVs. It brings its own
+TLS and PIN pairing so it does not need the tunnel.
+
+Sunshine is configured through its web UI at `https://localhost:47990` on
+first run, including the prep commands:
+
+    do:   /usr/local/bin/nyx-headless up
+    undo: /usr/local/bin/nyx-headless down
+
+That means the output exists only while a stream does, and Moonlight's
+requested resolution can be passed to `up` rather than hardcoding one.
+Deliberately not automated: sunshine's config format has not been verified
+here, and writing one blind is exactly how a silently-ignored file happens.
+
+**Neither server is started by the role.** Both attach to a running
+compositor, which does not exist during provisioning. ii also deliberately
+does not use uwsm, so there is no `graphical-session.target` for a systemd
+user unit to hang off — starting them wants ii's own autostart or a manual
+launch, not a unit file written blind.
+
+`roles/base` used to enable sshd on VMs only, which left a physical machine
+with no way in at all. It is now `nyx_sshd_enabled`, defaulting to
+`is_vm or nyx_remote_enabled`.
+
+For reaching any of this from outside the LAN, a mesh VPN — Tailscale,
+WireGuard — is the right layer rather than forwarding ports. Not provisioned.
+
+### Untested
+
+The games half cannot be evaluated in the VM: sunshine wants hardware
+encoding and Hyper-V has no GPU. Software encode would run and tell you
+nothing about latency. Same bucket as `roles/gpu` — written from
+documentation, to be proven on metal.
+
+The desktop half is testable in the VM, software-rendered and slow but
+functionally real. `nyx-headless up` then `wayvnc` is the check.

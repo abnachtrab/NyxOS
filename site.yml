@@ -36,6 +36,10 @@
     - role: session_hyprland
       tags: [session, hyprland]
 
+    - role: remote
+      when: nyx_remote_enabled | bool
+      tags: [remote]
+
     - role: branding
       tags: [branding]
 

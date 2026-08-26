@@ -134,12 +134,14 @@
     enabled: true
     state: started
 
-# sshd on test VMs only; physical machines have no listening service.
-- name: sshd (VM only)
+# VMs get sshd so the dev loop works. Physical machines do not, unless
+# something asks for it — remote access needs it, and wayvnc is reached
+# through an SSH tunnel rather than by exposing VNC.
+- name: sshd
   ansible.builtin.systemd_service:
     name: sshd
-    enabled: "{{ nyx_profile.is_vm | bool }}"
-    state: "{{ 'started' if nyx_profile.is_vm | bool else 'stopped' }}"
+    enabled: "{{ nyx_sshd_enabled | bool }}"
+    state: "{{ 'started' if nyx_sshd_enabled | bool else 'stopped' }}"
 
 - name: Harden sshd
   ansible.builtin.copy:
@@ -149,5 +151,5 @@
       PermitRootLogin no
     dest: /etc/ssh/sshd_config.d/10-nyxos.conf
     mode: "0644"
-  when: nyx_profile.is_vm | bool
+  when: nyx_sshd_enabled | bool
   notify: restart sshd

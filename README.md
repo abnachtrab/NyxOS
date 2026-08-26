@@ -46,6 +46,7 @@ roles/detect/         facts only, never mutates
 roles/base/           repos, packages, user, AUR helper, sshd
 roles/gpu/            chwd autoconfigure, NVIDIA userspace, early KMS
 roles/session_hyprland/  installs illogical-impulse, layers tweaks, login
+roles/remote/         wayvnc + sunshine on a headless output (opt-in)
 roles/branding/       os-release et al (stub)
 roles/backup_rclone/  OneDrive sync via systemd timer (stub)
 profiles/             override dicts for untestable hardware
@@ -123,6 +124,7 @@ per-machine and never leave it. `gitleaks` runs as a pre-commit hook.
 - [x] base
 - [x] session_hyprland — installs illogical-impulse and end4-pC, reaches a login
 - [ ] gpu — written, untested on real hardware
+- [ ] remote — desktop half testable, games half needs hardware
 - [ ] branding
 - [ ] backup_rclone
 - [ ] archiso image

@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# Create or remove the headless output that NyxOS streams from.
+#
+#   nyx-headless up [WIDTHxHEIGHT]
+#   nyx-headless down
+#   nyx-headless name
+#
+# Rendered by roles/remote. Called by hand for wayvnc, and by sunshine's
+# prep commands so the output exists only while a stream does — Moonlight
+# asks for a resolution, so `up` takes one.
+#
+# Hyprland assigns the name (HEADLESS-2 and so on) rather than accepting one,
+# so it has to be discovered by diffing the monitor list before and after.
+set -euo pipefail
+
+STATE="${XDG_RUNTIME_DIR:-/tmp}/nyx-headless.name"
+RES="${2:-{{ nyx_remote_resolution }}}"
+HZ="{{ nyx_remote_refresh }}"
+
+monitors() { hyprctl monitors -j | jq -r '.[].name' | sort; }
+
+case "${1:-}" in
+  up)
+    if [[ -s "$STATE" ]] && monitors | grep -qx "$(cat "$STATE")"; then
+      echo "already up: $(cat "$STATE")"
+      exit 0
+    fi
+    before=$(monitors)
+    hyprctl output create headless >/dev/null
+    # Hyprland creates the output asynchronously; poll rather than sleep a
+    # fixed amount, which is either too short or wasted time.
+    for _ in {1..20}; do
+      after=$(monitors)
+      name=$(comm -13 <(echo "$before") <(echo "$after") | head -1)
+      [[ -n "$name" ]] && break
+      sleep 0.1
+    done
+    if [[ -z "${name:-}" ]]; then
+      echo "no new output appeared after 'hyprctl output create headless'" >&2
+      exit 1
+    fi
+    hyprctl keyword monitor "${name},${RES}@${HZ},auto,1" >/dev/null
+    printf '%s\n' "$name" > "$STATE"
+    echo "$name at ${RES}@${HZ}"
+    ;;
+  down)
+    [[ -s "$STATE" ]] || { echo "nothing to remove"; exit 0; }
+    name=$(cat "$STATE")
+    hyprctl output remove "$name" >/dev/null || true
+    rm -f "$STATE"
+    echo "removed $name"
+    ;;
+  name)
+    [[ -s "$STATE" ]] && cat "$STATE" || { echo "not up" >&2; exit 1; }
+    ;;
+  *)
+    echo "usage: $0 {up [WIDTHxHEIGHT]|down|name}" >&2
+    exit 1
+    ;;
+esac

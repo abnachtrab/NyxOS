@@ -10,3 +10,8 @@
 # Not exclusive: keys added by hand on a machine are left alone. Set
 # exclusive in the task if the repo should be the sole source of truth.
 nyx_ssh_authorized_keys: []
+
+# sshd. On by default only on VMs, where the dev loop needs it. Remote access
+# turns it on everywhere, because wayvnc is reached through an SSH tunnel
+# rather than by exposing VNC to the network.
+nyx_sshd_enabled: "{{ (nyx_profile.is_vm | bool) or (nyx_remote_enabled | default(false) | bool) }}"

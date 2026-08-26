@@ -1,0 +1,47 @@
+---
+# wayvnc and sunshine, both pointed at a headless output so a client gets its
+# own resolution rather than a scaled 5120x1440.
+#
+# Neither server is started here. Both attach to a running compositor, which
+# does not exist during provisioning, and ii deliberately does not use uwsm —
+# so there is no graphical-session.target for a systemd user unit to hang
+# off. Start them from the session once it is up; see docs/NOTES.md.
+
+- name: Remote access packages
+  community.general.pacman:
+    name: "{{ nyx_remote_packages }}"
+    state: present
+
+- name: Headless output helper
+  ansible.builtin.template:
+    src: nyx-headless.j2
+    dest: /usr/local/bin/nyx-headless
+    mode: "0755"
+
+- name: wayvnc config directory
+  ansible.builtin.file:
+    path: "/home/{{ nyx_user }}/.config/wayvnc"
+    state: directory
+    owner: "{{ nyx_user }}"
+    group: "{{ nyx_user }}"
+    mode: "0755"
+
+- name: wayvnc config
+  ansible.builtin.template:
+    src: wayvnc-config.j2
+    dest: "/home/{{ nyx_user }}/.config/wayvnc/config"
+    owner: "{{ nyx_user }}"
+    group: "{{ nyx_user }}"
+    mode: "0644"
+
+# sunshine is configured through its own web UI on first run, including the
+# prep commands that call nyx-headless. Not automated: its config format has
+# not been verified, and writing one blind is how a silently-ignored file
+# happens.
+- name: How to finish setting this up
+  ansible.builtin.debug:
+    msg:
+      - "Desktop:  nyx-headless up && wayvnc --config ~/.config/wayvnc/config"
+      - "          then from the client: ssh -L {{ nyx_remote_vnc_port }}:localhost:{{ nyx_remote_vnc_port }} {{ nyx_user }}@<host>"
+      - "Games:    open https://localhost:{{ nyx_remote_sunshine_ui_port }} and set"
+      - "          prep do: /usr/local/bin/nyx-headless up, undo: /usr/local/bin/nyx-headless down"

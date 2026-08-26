@@ -1,0 +1,6 @@
+# Rendered by roles/remote. wayvnc reads this at start.
+#
+# Localhost only: VNC's own authentication is weak and sshd here is key-only,
+# so the tunnel provides the encryption and no extra port is exposed.
+address={{ nyx_remote_vnc_address }}
+port={{ nyx_remote_vnc_port }}
