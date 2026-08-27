@@ -78,23 +78,16 @@ nyx_packages_base:
 # Keep this short: it is the least reproducible layer, and one failing build
 # aborts the whole run, which is deliberate.
 #
-# Every entry is a -bin package. Prebuilt binaries cannot fail to compile,
-# which is most of what makes the AUR unreliable — hyprlogin was purged from
-# this repo for exactly that. A source build here would be a different risk.
+# One entry, and only when remote access is on. hypr-rdp is here because no
+# repo packages a VNC or RDP server for Hyprland, and wayvnc — the one repo
+# alternative — has no audio and no hardware encoding.
 #
-# hypr-rdp   no repo packages a VNC or RDP server for Hyprland, and wayvnc,
-#            the one repo alternative, has no audio or hardware encoding.
-#            Conditional on remote access being on.
-# onlyoffice OOXML fidelity that LibreOffice does not match. LibreOffice is
-#            in extra and can sit alongside it if that changes.
-# vesktop    Discord screenshare with audio, which the official Electron
-#            client still does not do on Wayland.
-#
-# Check `pacman -Si <name>` first if any of these move into a repo — CachyOS
-# already ships mpvpaper and sunshine that Arch does not.
+# onlyoffice-bin and vesktop-bin were briefly listed here and are not: both
+# turned out to be in the CachyOS repos. Check `pacman -Si <name>` before
+# assuming something is AUR-only. CachyOS carries mpvpaper, sunshine and
+# these two, none of which Arch ships.
 nyx_packages_aur: >-
-  {{ (['hypr-rdp'] if (nyx_remote_enabled | default(false) | bool) else [])
-     + ['onlyoffice-bin', 'vesktop-bin'] }}
+  {{ ['hypr-rdp'] if (nyx_remote_enabled | default(false) | bool) else [] }}
 
 # ---------------------------------------------------------------------------
 # Remote access (roles/remote)
