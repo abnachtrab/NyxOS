@@ -168,17 +168,41 @@ nyx_hypr_packages_apps:
   - podman
   - podman-compose
   - podman-docker
-  # cachyos ships both of these, so neither needs the AUR.
+  # cachyos ships this, so it does not need the AUR. The bin package is the
+  # prebuilt one — plain `vesktop` in the same repo is 344MB against 35MB,
+  # bundling its own Electron rather than using the system one.
   #
-  # OOXML fidelity LibreOffice does not match, and its own PDF editor. The
-  # bin package is the prebuilt one — plain `vesktop` in the same repo is
-  # 344MB against 35MB, bundling its own Electron rather than using the
-  # system one.
-  - onlyoffice-bin
   # Discord screenshare with audio, which the official Electron client still
   # does not manage on Wayland. Vencord is built in — that is a mod, not a
   # client, and cannot be installed on its own.
   - vesktop-bin
+
+# Launcher entries that open a site in its own Firefox window.
+#
+# Not PWAs: Firefox removed Site Specific Browser support and never replaced
+# it, so there is no install-as-app to hook into. These are .desktop files —
+# they show up in the launcher with a name and icon, and open a normal
+# Firefox window at the URL. Browser chrome is still there.
+#
+# PWAsForFirefox would give real app windows with isolated profiles, at the
+# cost of a native messaging host, an extension, and a second Firefox
+# runtime. Not used here.
+#
+# Icons come from the current icon theme; `firefox` is the fallback since it
+# is guaranteed present. Point icon: at an absolute path for a real logo.
+nyx_web_apps:
+  - name: "Word"
+    url: "https://www.office.com/launch/word"
+    comment: "Microsoft Word on the web"
+  - name: "Excel"
+    url: "https://www.office.com/launch/excel"
+    comment: "Microsoft Excel on the web"
+  - name: "PowerPoint"
+    url: "https://www.office.com/launch/powerpoint"
+    comment: "Microsoft PowerPoint on the web"
+  - name: "Outlook"
+    url: "https://outlook.office.com/mail/"
+    comment: "Outlook on the web"
 
 # Gaming. Separate from apps because it needs multilib and pulls 32-bit
 # libraries, which is a different failure mode from a missing app.

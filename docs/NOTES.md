@@ -850,3 +850,30 @@ encoding and Hyper-V has no GPU. hypr-rdp has the same problem — VA-API with
 no GPU falls back to OpenH264 software encoding, which will run and will tell
 you nothing about quality or latency. Both belong in the same bucket as
 `roles/gpu`: written from documentation, to be proven on metal.
+
+## Web apps, and why they are not PWAs
+
+Firefox removed Site Specific Browser support and never replaced it, so
+there is no install-as-app to hook into.  renders one .desktop
+file per entry into , each running
+. They appear in the launcher with a name and
+icon and open the site — but in a normal Firefox window, browser chrome and
+all.
+
+PWAsForFirefox is the option that gives real app windows with isolated
+profiles. It needs a native messaging host, an extension and a second
+Firefox runtime, which is a lot of moving parts for what is mostly a window
+decoration difference. Not used.
+
+Written to the user applications directory rather than /usr/share, since
+they are a personal choice rather than something the system provides.
+
+OnlyOffice was installed and then dropped — the Office web apps cover the
+same ground without a 300MB desktop suite. LibreOffice remains the repo
+option if an offline editor is ever wanted.
+
+render-check renders every template against the flat variable context, which
+has no , so a template used inside a loop failed as undefined. It now
+carries a  map from template name to the variable supplying
+, and renders once per entry — verified to still catch a bad attribute
+reference inside one.

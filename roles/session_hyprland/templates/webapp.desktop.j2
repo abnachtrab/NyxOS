@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name={{ item.name }}
+Comment={{ item.comment | default(item.url) }}
+Exec=firefox --new-window {{ item.url }}
+Icon={{ item.icon | default('firefox') }}
+Categories={{ item.categories | default('Network;Office;') }}
+Terminal=false
+StartupNotify=true

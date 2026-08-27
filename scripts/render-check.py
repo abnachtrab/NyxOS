@@ -48,6 +48,14 @@ def build_env(tdir):
     return env
 
 
+# Templates rendered inside a loop see an `item` that the flat context does
+# not have. Map the template to the variable that supplies it, so each entry
+# is checked rather than the template being skipped.
+LOOP_TEMPLATES = {
+    "webapp.desktop.j2": "nyx_web_apps",
+}
+
+
 def resolve_vars(env, ctx, passes=4):
     """Resolve variables that reference other variables.
 
@@ -130,12 +138,21 @@ def main():
             ctx = resolve_vars(env, {**group_vars, **defaults,
                                      "nyx_profile": profile})
             for name in names:
+                loop_var = LOOP_TEMPLATES.get(os.path.basename(name))
+                items = ctx.get(loop_var) or [] if loop_var else [None]
+                if loop_var and not items:
+                    continue
+
+                outs = []
                 try:
-                    out = env.get_template(name).render(**ctx)
-                    rendered += 1
+                    for entry in items:
+                        extra = {"item": entry} if entry is not None else {}
+                        outs.append(env.get_template(name).render(**ctx, **extra))
+                        rendered += 1
                 except Exception as exc:  # noqa: BLE001
                     failures.append(f"{role}/{name} [{pname}]: {exc}")
                     continue
+                out = "\n".join(outs)
 
                 if name.endswith(".json.j2"):
                     try:

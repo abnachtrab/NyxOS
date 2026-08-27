@@ -360,6 +360,29 @@
     group: "{{ nyx_user }}"
     mode: "0644"
 
+# Launcher entries for sites used as applications. Written to the user's
+# applications directory rather than /usr/share, since they are a personal
+# choice rather than something the system provides.
+- name: Web app launcher directory
+  ansible.builtin.file:
+    path: "/home/{{ nyx_user }}/.local/share/applications"
+    state: directory
+    owner: "{{ nyx_user }}"
+    group: "{{ nyx_user }}"
+    mode: "0755"
+  when: nyx_web_apps | length > 0
+
+- name: Web app launchers
+  ansible.builtin.template:
+    src: webapp.desktop.j2
+    dest: "/home/{{ nyx_user }}/.local/share/applications/nyx-{{ item.name | lower | replace(' ', '-') }}.desktop"
+    owner: "{{ nyx_user }}"
+    group: "{{ nyx_user }}"
+    mode: "0644"
+  loop: "{{ nyx_web_apps }}"
+  loop_control:
+    label: "{{ item.name }}"
+
 - name: Session desktop entry
   ansible.builtin.copy:
     src: hyprland.desktop
