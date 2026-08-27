@@ -169,23 +169,31 @@ nyx_hypr_packages_apps:
 #   gamemode  — a daemon a game asks for while it runs: CPU governor to
 #               performance, I/O priority, GPU power profile. Launch option
 #               `gamemoderun %command%`. Not a Steam alternative.
-#   mangohud  — a Vulkan/OpenGL overlay: FPS, frametimes, CPU and GPU load
-#               and temperature. Launch option `mangohud %command%`. Also
-#               not a Steam alternative — all three run together.
 #   gamescope — Valve's micro-compositor. Hyprland has native HDR and VRR in
 #               2026 so it is no longer required, but it still gives
 #               per-game resolution and refresh isolation, integer scaling,
 #               and it hosts its own XWayland so X11-only games behave.
 #
-# The lib32-* pairs are for 32-bit titles; without them those games run
-# without the overlay or the governor rather than failing visibly.
+# lib32-gamemode is for 32-bit titles; without it those games run without
+# the governor rather than failing visibly.
 nyx_hypr_packages_gaming:
   - steam
   - gamemode
   - lib32-gamemode
-  - mangohud
-  - lib32-mangohud
   - gamescope
+
+# Proton's Wayland backend, needed for HDR — enabling HDR auto-enables the
+# wine-wayland driver, so this is its prerequisite rather than an
+# alternative. Hyprland 0.55+ switches the output to HDR by itself when the
+# monitor and fullscreen content both support it.
+#
+# Set globally rather than per-game because the alternative is remembering a
+# launch option on every title. It is newer than the XWayland path, so if a
+# specific game misbehaves, `PROTON_ENABLE_WAYLAND=0 %command%` in its Steam
+# launch options overrides this for that game only.
+#
+# Needs DXVK 2.1+ or VKD3D-Proton 2.8+, so Proton 8.0+ or Proton GE 44+.
+nyx_hypr_proton_wayland: true
 
 # ---------------------------------------------------------------------------
 # Firefox enterprise policy
