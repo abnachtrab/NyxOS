@@ -1,5 +1,15 @@
 ---
-# TODO — see docs/ROADMAP.md. Stubbed so site.yml runs end to end.
-- name: backup_rclone placeholder
+# Packages only for now. The sync unit, timer and --backup-dir layout are
+# Phase 8; see docs/ROADMAP.md.
+
+- name: Backup packages
+  community.general.pacman:
+    name: "{{ nyx_backup_packages }}"
+    state: present
+
+- name: Remaining work
   ansible.builtin.debug:
-    msg: "role 'backup_rclone' not implemented yet (profile: {{ nyx_profile }})"
+    msg: >-
+      rclone is installed but not configured. Run `rclone config` to create
+      the {{ nyx_rclone_remote }} remote; the token is per-machine and is
+      never committed. The systemd timer is Phase 8.

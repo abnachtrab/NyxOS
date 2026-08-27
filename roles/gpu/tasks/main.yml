@@ -9,6 +9,11 @@
 # early KMS, and the modeset flag. Compositor env vars are rendered by
 # roles/session_hyprland into illogical-impulse's hypr/custom/env.lua.
 
+- name: Hardware detection tool
+  community.general.pacman:
+    name: "{{ nyx_gpu_packages }}"
+    state: present
+
 - name: List profiles chwd would apply
   ansible.builtin.command: chwd --list
   register: nyx_chwd_list

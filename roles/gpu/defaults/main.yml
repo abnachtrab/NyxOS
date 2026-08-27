@@ -5,6 +5,12 @@
 # that and nvidia-open-dkms at once. Override this list for a pre-Turing card.
 # lib32-nvidia-utils needs [multilib]; the role asserts it rather than
 # enabling it.
+# roles/gpu shells out to chwd. CachyOS ships it and install.sh pacstraps
+# it, but nothing here declared it — and chwd -a fails soft, so a missing
+# binary means drivers silently never get configured.
+nyx_gpu_packages:
+  - chwd
+
 nyx_nvidia_packages:
   - nvidia-open-dkms
   - nvidia-utils

@@ -1,0 +1,5 @@
+---
+# rclone only. The remote itself is configured by hand once per machine with
+# `rclone config` — the OAuth token is per-machine and never committed.
+nyx_backup_packages:
+  - rclone

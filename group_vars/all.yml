@@ -63,6 +63,17 @@ nyx_packages_base:
   - zip
   - unzip
   - 7zip
+  # Used by roles/remote's nyx-headless. It worked only because
+  # illogical-impulse happens to install jq — declared here so it does not
+  # depend on that.
+  - jq
+  # roles/detect runs `sbctl status --json`. It fails soft, so a missing
+  # binary silently reports secureboot false rather than erroring. Phase 10
+  # needs it for real.
+  - sbctl
+  # Installed, NOT enabled. `ufw enable` defaults to deny-incoming, which
+  # drops sshd and locks you out of a headless machine. Allow OpenSSH first.
+  - ufw
 
 # Keep this short: it is the least reproducible layer, and one failing build
 # aborts the whole run, which is deliberate.

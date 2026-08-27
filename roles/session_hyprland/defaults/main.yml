@@ -154,6 +154,38 @@ nyx_hypr_packages_apps:
   # cachyos/mpvpaper, so a plain repo install — nyx_packages_aur stays empty.
   # ffmpeg arrives transitively as an mpv dependency.
   - mpvpaper
+  # VLC runs through XWayland. Its Wayland output is not usable — VLC 3's is
+  # broken, and video comes out cropped or malformed without xorg-xwayland
+  # present. Hyprland ships XWayland, so it works; it is just not native.
+  # mpv is already installed as an mpvpaper dependency and IS native Wayland,
+  # so it is the better default player. VLC is here for the formats and
+  # streaming protocols mpv does not cover.
+  - vlc
+
+# Gaming. Separate from apps because it needs multilib and pulls 32-bit
+# libraries, which is a different failure mode from a missing app.
+#
+#   steam     — the store and runtime.
+#   gamemode  — a daemon a game asks for while it runs: CPU governor to
+#               performance, I/O priority, GPU power profile. Launch option
+#               `gamemoderun %command%`. Not a Steam alternative.
+#   mangohud  — a Vulkan/OpenGL overlay: FPS, frametimes, CPU and GPU load
+#               and temperature. Launch option `mangohud %command%`. Also
+#               not a Steam alternative — all three run together.
+#   gamescope — Valve's micro-compositor. Hyprland has native HDR and VRR in
+#               2026 so it is no longer required, but it still gives
+#               per-game resolution and refresh isolation, integer scaling,
+#               and it hosts its own XWayland so X11-only games behave.
+#
+# The lib32-* pairs are for 32-bit titles; without them those games run
+# without the overlay or the governor rather than failing visibly.
+nyx_hypr_packages_gaming:
+  - steam
+  - gamemode
+  - lib32-gamemode
+  - mangohud
+  - lib32-mangohud
+  - gamescope
 
 # ---------------------------------------------------------------------------
 # Firefox enterprise policy

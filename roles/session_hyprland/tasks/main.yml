@@ -35,6 +35,34 @@
     name: "{{ nyx_hypr_dm_packages + nyx_hypr_packages_apps }}"
     state: present
 
+# Steam and the lib32-* halves of gamemode and mangohud need [multilib].
+# roles/gpu asserts it too, but only when an NVIDIA card is present — this
+# applies to every machine that wants games. Asserted rather than enabled,
+# for the same reason roles/base reads the CachyOS sections instead of
+# writing them.
+- name: Read configured repos
+  ansible.builtin.shell:
+    cmd: |
+      grep -oP '^\[\K[^]]+' /etc/pacman.conf || true
+  register: nyx_hypr_repos
+  changed_when: false
+  when: nyx_hypr_packages_gaming | length > 0
+
+- name: Require multilib for the 32-bit gaming libraries
+  ansible.builtin.assert:
+    that: "'multilib' in nyx_hypr_repos.stdout_lines"
+    fail_msg: >-
+      nyx_hypr_packages_gaming needs [multilib] in /etc/pacman.conf for steam
+      and the lib32-* packages. Enable it, or empty the list.
+    success_msg: "multilib present"
+  when: nyx_hypr_repos.skipped is not defined
+
+- name: Gaming packages
+  community.general.pacman:
+    name: "{{ nyx_hypr_packages_gaming }}"
+    state: present
+  when: nyx_hypr_packages_gaming | length > 0
+
 # Only one process can own org.freedesktop.Notifications. Anything left
 # installed races Quickshell's implementation and the loser shows nothing,
 # with no error anywhere.
