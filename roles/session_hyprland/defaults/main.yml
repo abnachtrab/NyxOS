@@ -161,6 +161,13 @@ nyx_hypr_packages_apps:
   # so it is the better default player. VLC is here for the formats and
   # streaming protocols mpv does not cover.
   - vlc
+  # Rootless and daemonless, with quadlets as native systemd units — which
+  # suits a machine already managed by units. podman-docker provides a
+  # `docker` command that calls podman, so tooling expecting the name works.
+  # It conflicts with the real docker package, which is not installed.
+  - podman
+  - podman-compose
+  - podman-docker
 
 # Gaming. Separate from apps because it needs multilib and pulls 32-bit
 # libraries, which is a different failure mode from a missing app.
