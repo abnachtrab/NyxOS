@@ -24,6 +24,10 @@
   ansible.builtin.debug:
     var: nyx_chwd_list.stdout_lines
 
+# failed_when: false because "no matching profile" is a normal outcome and
+# chwd reports it as failure. The result is REPORTED rather than discarded —
+# on AMD and Intel machines this is the only step that configures drivers, so
+# a silent failure here means no graphics driver and a green play.
 - name: Autoconfigure drivers
   ansible.builtin.command: chwd -a
   register: nyx_chwd_run
@@ -31,6 +35,16 @@
     'No device of class' not in (nyx_chwd_run.stderr | default(''))
     and 'already installed' not in (nyx_chwd_run.stdout | default(''))
   failed_when: false
+
+- name: Report a chwd failure
+  ansible.builtin.debug:
+    msg: >-
+      WARNING: chwd -a exited {{ nyx_chwd_run.rc }} and did not match
+      "no device of class". No driver profile was applied.
+      stderr: {{ nyx_chwd_run.stderr | default('') | trim }}
+  when:
+    - nyx_chwd_run.rc != 0
+    - "'No device of class' not in (nyx_chwd_run.stderr | default(''))"
 
 - name: NVIDIA
   when: "'nvidia' in nyx_profile.gpus"

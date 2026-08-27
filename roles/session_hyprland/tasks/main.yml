@@ -95,28 +95,33 @@
 # zz- so it sorts after everything in sudoers.d. 99- lost to something on a
 # real run: sudo kept prompting with the grant in place. Files containing a
 # dot or ending in ~ are ignored entirely, so the name matters.
-- name: Temporary passwordless sudo for the ii installer
-  ansible.builtin.copy:
-    content: |
-      Defaults:{{ nyx_user }} !authenticate
-      {{ nyx_user }} ALL=(ALL) NOPASSWD: ALL
-    dest: /etc/sudoers.d/zz-nyx-ii-temp
-    mode: "0440"
-    validate: "visudo -cf %s"
-
-# Fail here, with the reason, rather than 40 minutes later at an invisible
-# password prompt inside the installer.
-- name: Confirm the grant actually applies
-  ansible.builtin.command:
-    argv: ["sudo", "-n", "true"]
-  become: true
-  become_user: "{{ nyx_user }}"
-  register: nyx_ii_sudo_check
-  changed_when: false
-  failed_when: nyx_ii_sudo_check.rc != 0
-
+# Everything that can fail while the grant exists lives INSIDE this block, so
+# always: revokes it on every path. The grant and the check used to sit
+# outside it: a failing check aborted the play and left unauthenticated root
+# for nyx_user on disk permanently, which is the opposite of what the check
+# was added to prevent.
 - name: Run the ii installer
   block:
+    - name: Temporary passwordless sudo for the ii installer
+      ansible.builtin.copy:
+        content: |
+          Defaults:{{ nyx_user }} !authenticate
+          {{ nyx_user }} ALL=(ALL) NOPASSWD: ALL
+        dest: /etc/sudoers.d/zz-nyx-ii-temp
+        mode: "0440"
+        validate: "visudo -cf %s"
+
+    # Fail here, with the reason, rather than 40 minutes later at an invisible
+    # password prompt inside the installer.
+    - name: Confirm the grant actually applies
+      ansible.builtin.command:
+        argv: ["sudo", "-n", "true"]
+      become: true
+      become_user: "{{ nyx_user }}"
+      register: nyx_ii_sudo_check
+      changed_when: false
+      failed_when: nyx_ii_sudo_check.rc != 0
+
     # Installs the illogical-impulse-* meta-packages and copies the config
     # tree. Long: a full pacman -Syu, then Quickshell built against Qt6.
     #

@@ -19,7 +19,7 @@ import re
 import sys
 
 import yaml
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -35,10 +35,16 @@ def load_yaml(path):
 def build_env(tdir):
     # Ansible's template module uses trim_blocks; `bool` is an Ansible filter,
     # not core Jinja2, so it has to be registered here.
+    # StrictUndefined, not the default. With the default, a misspelled or
+    # missing variable renders as empty string and the check reports "all
+    # checks passed" — while the real Ansible run raises
+    # AnsibleUndefinedVariable and leaves the machine without the file. A
+    # checker that cannot fail is worse than no checker.
     env = Environment(
         loader=FileSystemLoader(os.path.join(ROOT, tdir)),
         keep_trailing_newline=True,
         trim_blocks=True,
+        undefined=StrictUndefined,
     )
     env.filters["bool"] = lambda v: v is True or str(v).lower() in (
         "true", "1", "yes", "on",
@@ -65,19 +71,33 @@ def resolve_vars(env, ctx, passes=4):
     silently produces output that looks fine and is wrong. Iterate until
     nothing changes.
     """
+    unresolved = {}
     for _ in range(passes):
         changed = False
         for key, value in list(ctx.items()):
             if isinstance(value, str) and "{{" in value:
                 try:
                     rendered = env.from_string(value).render(**ctx)
-                except Exception:  # noqa: BLE001 - unresolvable here is fine
+                except Exception as exc:  # noqa: BLE001
+                    # A var that cannot resolve yet is normal on an early
+                    # pass, but one that never resolves is a real error. Keep
+                    # the reason so the caller can report it rather than
+                    # silently leaving {{ }} in the output.
+                    unresolved[key] = f"{type(exc).__name__}: {exc}"
                     continue
+                unresolved.pop(key, None)
                 if rendered != value:
                     ctx[key] = rendered
                     changed = True
         if not changed:
             break
+    if unresolved:
+        for key, why in sorted(unresolved.items()):
+            print(f"  unresolvable variable {key}: {why}")
+        raise RuntimeError(
+            f"{len(unresolved)} variable(s) never resolved; "
+            "rendering with them would embed a literal {{ }}"
+        )
     return ctx
 
 
@@ -135,7 +155,10 @@ def main():
             continue
 
         for pname, profile in profiles.items():
-            ctx = resolve_vars(env, {**group_vars, **defaults,
+            # Role defaults are the LOWEST precedence source in Ansible;
+            # group_vars/all overrides them. Merging the other way round
+            # would check a combination that never actually runs.
+            ctx = resolve_vars(env, {**defaults, **group_vars,
                                      "nyx_profile": profile})
             for name in names:
                 loop_var = LOOP_TEMPLATES.get(os.path.basename(name))

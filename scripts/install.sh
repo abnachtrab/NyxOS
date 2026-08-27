@@ -11,7 +11,70 @@
 #   -> chwd -> initcpio -> bootloader -> services -> provision
 #
 # No bootstrap user is created; roles/base creates nyx_user and nothing else.
-set -euo pipefail
+#
+# Failure policy: every failure is loud and names the stage it happened in.
+# Nothing is retried silently, nothing is ignored without saying so. The
+# target stays mounted at /mnt when something goes wrong, so the half-built
+# system can be inspected rather than vanishing.
+set -Eeuo pipefail   # -E so the ERR trap fires inside functions and subshells
+
+STAGE="startup"
+
+on_err() {
+    local rc=$? line=$1
+    echo                                                              >&2
+    echo "==============================================================" >&2
+    echo " INSTALL FAILED"                                            >&2
+    echo "   stage:    ${STAGE}"                                      >&2
+    echo "   line:     ${line}"                                       >&2
+    echo "   command:  ${BASH_COMMAND}"                               >&2
+    echo "   exit:     ${rc}"                                         >&2
+    echo "==============================================================" >&2
+    case "$STAGE" in
+        startup|preflight)
+            echo " Nothing was written. The disk is untouched."       >&2
+            ;;
+        partition|format)
+            echo " The partition table and/or filesystems were being" >&2
+            echo " rewritten. The disk is NOT usable as it stands."   >&2
+            echo " Re-running this script starts over cleanly."       >&2
+            ;;
+        *)
+            echo " The target is partially built and still mounted"   >&2
+            echo " at /mnt so it can be inspected. Release it with:"  >&2
+            echo "   umount -R /mnt"                                  >&2
+            echo " Re-running this script wipes and starts over."     >&2
+            ;;
+    esac
+}
+trap 'on_err $LINENO' ERR
+
+# The vars file holds the password hash. Without this it survives any failure
+# between writing it and the explicit removal after provisioning.
+cleanup() {
+    if [[ -n "${VARS_FILE:-}" && -f "$VARS_FILE" ]]; then
+        rm -f "$VARS_FILE"
+        echo "removed ${VARS_FILE}" >&2
+    fi
+}
+trap cleanup EXIT
+
+# Retry with backoff, and FAIL if every attempt fails. A bare
+# `for ... do cmd && break; done` cannot trip errexit — the failing command is
+# the left operand of &&, which errexit exempts — so a 5-of-5 failure would
+# continue silently and surface as something unrelated much later.
+retry() {
+    local n=0 max=5
+    until "$@"; do
+        n=$((n + 1))
+        if (( n >= max )); then
+            echo "FAILED after ${n} attempts: $*" >&2
+            return 1
+        fi
+        echo "attempt ${n}/${max} failed, retrying in $((n * 5))s: $*" >&2
+        sleep $((n * 5))
+    done
+}
 
 DISK="${NYX_DISK:?set NYX_DISK explicitly, e.g. /dev/nvme0n1}"
 HOST="${NYX_HOST:-nyxos}"
@@ -34,9 +97,22 @@ if [[ "${NYX_FORCE:-0}" != "1" ]] && ! grep -q 'nyxos.auto=1' /proc/cmdline; the
 fi
 
 # Every mountpoint currently backed by a partition of $DISK.
+#
+# findmnt exits 1 when nothing matches, which is a legitimate "no mounts", but
+# any other failure would make this return empty — and an empty result makes
+# the safety check below pass without checking anything. Distinguish them.
 disk_mounts() {
-  findmnt -rno TARGET,SOURCE | awk -v d="$DISK" 'index($2, d) == 1 { print $1 }'
+  local out rc
+  out=$(findmnt -rno TARGET,SOURCE); rc=$?
+  if (( rc > 1 )); then
+    echo "findmnt failed (exit ${rc}); cannot determine what is mounted." >&2
+    echo "Refusing to touch ${DISK} without knowing that." >&2
+    exit 1
+  fi
+  printf '%s\n' "$out" | awk -v d="$DISK" 'index($2, d) == 1 { print $1 }'
 }
+
+STAGE="preflight"
 
 # Refuse before prompting for anything if the target is carrying the running
 # system or the live medium. Checked read-only; nothing is unmounted here.
@@ -80,6 +156,7 @@ done
 PW_HASH="$(printf '%s' "$pw1" | openssl passwd -6 -stdin)"
 unset pw1 pw2
 
+STAGE="release"
 # --- release the device ---------------------------------------------------
 # A partition that is still mounted or in use as swap cannot be repartitioned
 # cleanly: mkfs refuses, or partprobe declines to re-read the table and the
@@ -102,6 +179,7 @@ while read -r sdev _; do
   esac
 done < <(tail -n +2 /proc/swaps)
 
+STAGE="partition"
 # --- partition ------------------------------------------------------------
 wipefs -a "$DISK"
 sgdisk -Z "$DISK"
@@ -112,6 +190,22 @@ partprobe "$DISK"
 
 if [[ "$DISK" =~ (nvme|mmcblk|loop) ]]; then P="${DISK}p"; else P="$DISK"; fi
 
+# partprobe issues BLKRRPART and returns; udev creates the partition nodes
+# asynchronously. Without waiting, the wipefs below can run before
+# /dev/<disk>3 exists and abort with "No such file or directory", which reads
+# like a wrong NYX_DISK rather than a race. Intermittent, and worse on a
+# loaded host.
+udevadm settle || echo "WARNING: udevadm settle failed; polling for nodes" >&2
+for dev in "${P}1" "${P}2" "${P}3"; do
+  for _ in {1..20}; do [[ -b "$dev" ]] && break; sleep 0.5; done
+  if [[ ! -b "$dev" ]]; then
+    echo "partition node ${dev} never appeared after partprobe." >&2
+    echo "The partition table was written but the kernel has not published" >&2
+    echo "the nodes. Re-running the script is safe." >&2
+    exit 1
+  fi
+done
+
 # sgdisk -Z zaps the partition table, not the filesystem superblocks inside
 # the ranges it re-creates. On a re-install those survive at the same offsets,
 # and an untyped mount probes the stale one: mkfs.btrfs succeeds, then
@@ -119,6 +213,7 @@ if [[ "$DISK" =~ (nvme|mmcblk|loop) ]]; then P="${DISK}p"; else P="$DISK"; fi
 # filesystem as corrupt. Clear each partition before laying anything down.
 wipefs -a "${P}1" "${P}2" "${P}3"
 
+STAGE="format"
 mkfs.fat -F32 -n ESP      "${P}1"
 mkfs.ext4 -F -L recovery  "${P}2"   # rescue volume; kept simple on purpose
 mkfs.btrfs -f -L nyxroot  "${P}3"   # LUKS goes under this in Phase 10
@@ -147,15 +242,17 @@ mount -t btrfs -o "subvol=@tmp,${BTRFS_OPTS}"   "${P}3" /mnt/var/tmp
 mount -t btrfs -o "subvol=@log,${BTRFS_OPTS}"   "${P}3" /mnt/var/log
 mount -t vfat "${P}1" /mnt/boot
 
+STAGE="keyring"
 # --- initialize_pacman ----------------------------------------------------
 # Calamares ranks mirrors and builds the keyring on the live system, then
 # copies both into the target. Copying /etc/pacman.d/gnupg avoids a second
 # pacman-key --init inside the chroot.
 pacman-key --init
-for _ in {1..5}; do pacman -Sy --noconfirm --needed cachyos-keyring && break; done
-for _ in {1..5}; do pacman -Sy --noconfirm --needed archlinux-keyring && break; done
+retry pacman -Sy --noconfirm --needed cachyos-keyring
+retry pacman -Sy --noconfirm --needed archlinux-keyring
 pacman-key --populate
 
+STAGE="pacstrap"
 # --- pacstrap -------------------------------------------------------------
 # Base list from /etc/calamares/modules/pacstrap.conf, minus tools for
 # filesystems this install does not create.
@@ -182,6 +279,7 @@ cp /etc/pacman.d/cachyos*-mirrorlist /mnt/etc/pacman.d/
 cp -a /etc/pacman.d/gnupg            /mnt/etc/pacman.d/
 cp /etc/resolv.conf                  /mnt/etc/
 
+STAGE="configure"
 # --- fstab / hostname -----------------------------------------------------
 genfstab -U /mnt >> /mnt/etc/fstab
 echo "$HOST" > /mnt/etc/hostname
@@ -198,19 +296,33 @@ echo "${LOCALE} UTF-8"  > /mnt/etc/locale.gen
 echo "LANG=${LOCALE}"   > /mnt/etc/locale.conf
 echo "KEYMAP=${KEYMAP}" > /mnt/etc/vconsole.conf
 
-arch-chroot /mnt /bin/bash -euo pipefail <<CHROOT
-locale-gen
-ln -sf "/usr/share/zoneinfo/${TZ}" /etc/localtime
-hwclock --systohc
+# A heredoc would make the chroot script itself stdin, so anything inside that
+# reads stdin — a pacman confirmation prompt from chwd on a machine that has a
+# real GPU — consumes the remaining lines. They never run, and the block still
+# exits 0. That would leave a system with no initramfs and no bootloader while
+# reporting success. Use -c and give it /dev/null instead.
+#
+# TZ is exported rather than interpolated because single quotes do not expand;
+# arch-chroot passes the environment through.
+STAGE="chroot" TZ="$TZ" arch-chroot /mnt /bin/bash -Eeuo pipefail -c '
+  locale-gen
+  ln -sf "/usr/share/zoneinfo/${TZ}" /etc/localtime
+  hwclock --systohc
 
-# chwd runs before package installation in the Calamares sequence.
-chwd -a || true
+  # chwd runs before package installation in the Calamares sequence. Its
+  # failure is not fatal — a machine with no matching profile is normal — but
+  # it is reported rather than discarded, because on real hardware this is the
+  # only step that configures graphics drivers.
+  if ! chwd -a </dev/null; then
+      echo "WARNING: chwd -a failed; no driver profile was applied." >&2
+      echo "         roles/gpu runs later and may still fix this."   >&2
+  fi
 
-mkinitcpio -P
-systemctl enable NetworkManager fstrim.timer
+  mkinitcpio -P
+  systemctl enable NetworkManager fstrim.timer
 
-refind-install
-CHROOT
+  refind-install </dev/null
+' </dev/null
 
 # --- bootloader cmdline ---------------------------------------------------
 # refind-install's mkrlconf builds refind_linux.conf from /proc/cmdline.
@@ -228,25 +340,38 @@ cat > /mnt/boot/refind_linux.conf <<EOF
 EOF
 echo "refind_linux.conf written for root=UUID=${ROOT_UUID} subvol=@"
 
+STAGE="provision"
 # --- provision ------------------------------------------------------------
 git clone --branch "$BRANCH" "$REPO" /mnt/root/NyxOS
 
 # Defining nyx_password as an extra var makes Ansible skip its vars_prompt.
-install -m 600 /dev/null /mnt/root/.nyx-vars.yml
-printf 'nyx_password: "%s"\n' "$PW_HASH" > /mnt/root/.nyx-vars.yml
+# VARS_FILE is what the EXIT trap removes, so the hash does not survive a
+# failure between here and the explicit removal below.
+VARS_FILE=/mnt/root/.nyx-vars.yml
+install -m 600 /dev/null "$VARS_FILE"
+printf 'nyx_password: "%s"\n' "$PW_HASH" > "$VARS_FILE"
 unset PW_HASH
 
-arch-chroot /mnt /bin/bash -euo pipefail -c '
+# ansible.cfg sets become_ask_pass = True, which makes ansible-playbook prompt
+# for a become password at startup regardless of already being root. That is
+# right for running the playbook by hand; here it would block an otherwise
+# unattended install. Answering it explicitly keeps the prompt for humans and
+# removes it here; root needs no password.
+arch-chroot /mnt /bin/bash -Eeuo pipefail -c '
   cd /root/NyxOS
   ansible-galaxy collection install -r requirements.yml
-  ansible-playbook site.yml -c local -i localhost, -e @/root/.nyx-vars.yml
-'
+  ansible-playbook site.yml -c local -i localhost, \
+    -e @/root/.nyx-vars.yml -e ansible_become_password=""
+' </dev/null
+
 # shred cannot guarantee anything on btrfs: copy-on-write means the
 # overwrite lands in new extents and the original blocks stay until they are
 # reclaimed. The file holds a hash rather than a plaintext password, so this
 # removes it without claiming the data is unrecoverable.
-rm -f /mnt/root/.nyx-vars.yml
+rm -f "$VARS_FILE"
+unset VARS_FILE
 
+STAGE="finish"
 # Unmount here rather than leaving it to the caller: the tree is nested seven
 # subvolumes deep, and leaving it mounted is what a re-run then trips over.
 if ! umount -R /mnt; then

@@ -19,8 +19,12 @@ HZ="{{ nyx_remote_refresh }}"
 # "HYPRLAND_INSTANCE_SIGNATURE not set!" and anything piping it to jq dies
 # with a parse error instead of a useful message. Find the running instance
 # rather than requiring the caller to export three variables.
+# Set unconditionally, not only in the branch below: the state file path is
+# derived from it, and falling back to /tmp would put that somewhere every
+# local account can write.
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+
 if [[ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]]; then
-    export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
     sig=$(ls -1t "${XDG_RUNTIME_DIR}/hypr" 2>/dev/null | head -1 || true)
     if [[ -z "$sig" ]]; then
         echo "no Hyprland instance found under ${XDG_RUNTIME_DIR}/hypr" >&2
@@ -30,7 +34,7 @@ if [[ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]]; then
     export HYPRLAND_INSTANCE_SIGNATURE="$sig"
 fi
 
-STATE="${XDG_RUNTIME_DIR:-/tmp}/nyx-headless.name"
+STATE="${XDG_RUNTIME_DIR}/nyx-headless.name"
 
 # hyprctl reports failure on stdout as plain text and still exits 0, so check
 # the shape of the output rather than the exit status.

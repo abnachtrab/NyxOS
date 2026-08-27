@@ -9,15 +9,27 @@ set -euo pipefail
 
 RES="${1:-{{ nyx_remote_resolution }}}"
 
+CONFIG="${HOME}/.config/hypr-rdp/config.toml"
+if [[ ! -f "$CONFIG" ]]; then
+    echo "no ${CONFIG}" >&2
+    echo "The role only writes it when nyx_rdp_password is set. Without it" >&2
+    echo "hypr-rdp has no credentials and nothing can authenticate:" >&2
+    echo "  ansible-playbook site.yml --tags remote -e nyx_rdp_password='...'" >&2
+    exit 1
+fi
+
 nyx-headless up "$RES"
 output=$(nyx-headless name)
+
+# Remove the output when the server exits, so a disconnected session does not
+# leave a phantom monitor behind.
+#
+# NOT `exec hypr-rdp`: exec replaces this shell, and the trap dies with the
+# process that owns it, so the cleanup would never run.
+trap 'nyx-headless down >/dev/null 2>&1 || true' EXIT
 
 echo "serving ${output} on {{ nyx_rdp_bind }}:{{ nyx_rdp_port }}"
 echo "from a client:  ssh -L {{ nyx_rdp_local_port }}:localhost:{{ nyx_rdp_port }} {{ nyx_user }}@$(hostname)"
 echo "then RDP to:    localhost:{{ nyx_rdp_local_port }}"
 
-# Remove the output again when the server exits, so a disconnected session
-# does not leave a phantom monitor behind.
-trap 'nyx-headless down >/dev/null 2>&1 || true' EXIT
-
-exec hypr-rdp --output "$output" --resolution "$RES"
+hypr-rdp --output "$output" --resolution "$RES"

@@ -88,44 +88,49 @@
     nyx_aur_needed: "{{ (nyx_have_helper.rc != 0)
                         or (nyx_packages_aur | length > 0) }}"
 
-- name: Temporary passwordless pacman for AUR builds
+# The grant, everything done while it exists, and its revocation are one
+# block so always: runs on every path. Previously these were sequential
+# tasks: a failing makepkg or AUR build — which this repo deliberately keeps
+# fatal — aborted the play and left the grant on disk permanently.
+- name: AUR work
   when: nyx_aur_needed | bool
-  ansible.builtin.copy:
-    content: "{{ nyx_user }} ALL=(ALL) NOPASSWD: /usr/bin/pacman\n"
-    dest: /etc/sudoers.d/99-nyx-aur-temp
-    mode: "0440"
-    validate: "visudo -cf %s"
-
-- name: Bootstrap AUR helper
-  when: nyx_have_helper.rc != 0
-  become: true
-  become_user: "{{ nyx_user }}"
   block:
-    - name: Clone helper PKGBUILD
-      ansible.builtin.git:
-        repo: "https://aur.archlinux.org/{{ nyx_aur_helper }}-bin.git"
-        dest: "/tmp/{{ nyx_aur_helper }}-bin"
-        version: master
-    - name: makepkg -si
-      ansible.builtin.command: makepkg -si --noconfirm
-      args:
-        chdir: "/tmp/{{ nyx_aur_helper }}-bin"
-      changed_when: true
+    - name: Temporary passwordless pacman for AUR builds
+      ansible.builtin.copy:
+        content: "{{ nyx_user }} ALL=(ALL) NOPASSWD: /usr/bin/pacman\n"
+        dest: /etc/sudoers.d/99-nyx-aur-temp
+        mode: "0440"
+        validate: "visudo -cf %s"
 
-- name: AUR packages
-  kewlfft.aur.aur:
-    name: "{{ nyx_packages_aur }}"
-    use: "{{ nyx_aur_helper }}"
-    state: present
-  become: true
-  become_user: "{{ nyx_user }}"
-  when: nyx_packages_aur | length > 0
+    - name: Bootstrap AUR helper
+      when: nyx_have_helper.rc != 0
+      become: true
+      become_user: "{{ nyx_user }}"
+      block:
+        - name: Clone helper PKGBUILD
+          ansible.builtin.git:
+            repo: "https://aur.archlinux.org/{{ nyx_aur_helper }}-bin.git"
+            dest: "/tmp/{{ nyx_aur_helper }}-bin"
+            version: master
+        - name: makepkg -si
+          ansible.builtin.command: makepkg -si --noconfirm
+          args:
+            chdir: "/tmp/{{ nyx_aur_helper }}-bin"
+          changed_when: true
 
-- name: Revoke temporary passwordless pacman
-  ansible.builtin.file:
-    path: /etc/sudoers.d/99-nyx-aur-temp
-    state: absent
-  when: nyx_aur_needed | bool
+    - name: AUR packages
+      kewlfft.aur.aur:
+        name: "{{ nyx_packages_aur }}"
+        use: "{{ nyx_aur_helper }}"
+        state: present
+      become: true
+      become_user: "{{ nyx_user }}"
+      when: nyx_packages_aur | length > 0
+  always:
+    - name: Revoke temporary passwordless pacman
+      ansible.builtin.file:
+        path: /etc/sudoers.d/99-nyx-aur-temp
+        state: absent
 
 # --- services -------------------------------------------------------------
 - name: NetworkManager
