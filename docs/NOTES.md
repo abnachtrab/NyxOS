@@ -984,3 +984,34 @@ symlink outright.
 
 Found while investigating an unmanaged eth0 that turned out to be unrelated
 and did not recur.
+
+## Idle suspend takes eth0 down on Hyper-V
+
+Reported as an unmanaged eth0 with no network. It is reproducible: leave the
+machine idle long enough that the screen blanks, come back, and the interface
+is down. An earlier occurrence looked like a one-off and was dismissed; it is
+not.
+
+illogical-impulse ships a hypridle config with a suspend listener, so an idle
+session blanks the screen and then suspends the machine. A Hyper-V guest does
+not survive that cleanly — hv_netvsc does not reinitialise on resume, so
+NetworkManager finds a device it can no longer manage and the network is gone
+until it is told to take it back:
+
+    sudo nmcli device set eth0 managed yes
+
+Fixed by masking the sleep targets rather than editing hypridle.conf, which
+./setup install rewrites on every run. See nyx_inhibit_sleep in
+roles/base/defaults/main.yml. DPMS blanking is unaffected; only the
+transition to sleep is refused.
+
+The same masking applies to any machine with remote access enabled, VM or
+not. A desktop that suspends itself is unreachable over RDP exactly when it
+is wanted, which is a policy decision independent of the Hyper-V bug.
+
+Not yet confirmed: that hypridle is the specific trigger rather than
+something else calling systemctl suspend. The masking is correct either way,
+because nothing here should be suspending. If the interface still drops after
+this change, that rules suspend out — check the next boot with:
+
+    journalctl -b -1 -g 'suspend|Reached target Sleep|hv_netvsc'

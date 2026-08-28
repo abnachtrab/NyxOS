@@ -15,3 +15,26 @@ nyx_ssh_authorized_keys: []
 # turns it on everywhere, because wayvnc is reached through an SSH tunnel
 # rather than by exposing VNC to the network.
 nyx_sshd_enabled: "{{ (nyx_profile.is_vm | bool) or (nyx_remote_enabled | default(false) | bool) }}"
+
+# Machines that must not suspend.
+#
+# illogical-impulse ships a hypridle config with a suspend listener, so an
+# idle machine blanks the screen and then suspends. On a Hyper-V guest
+# hv_netvsc does not come back cleanly from that: eth0 returns unmanaged and
+# the network is gone until NetworkManager is told to take it again.
+#
+# It is also wrong for anything reachable remotely — a machine you RDP into
+# that suspends itself is unreachable exactly when you want it.
+#
+# Masked at the systemd level rather than configured in hypridle.conf,
+# because ./setup install rewrites that file on every run. DPMS blanking is
+# unaffected; only the transition to sleep is refused.
+nyx_inhibit_sleep: >-
+  {{ (nyx_profile.is_vm | bool) or (nyx_remote_enabled | default(false) | bool) }}
+
+nyx_sleep_targets:
+  - sleep.target
+  - suspend.target
+  - hibernate.target
+  - hybrid-sleep.target
+  - suspend-then-hibernate.target
