@@ -62,19 +62,24 @@
 # encrypt: — with it, a blank answer becomes the hash of the empty string
 # rather than staying empty, which silently created an account with an empty
 # password.
+# Set only when there is actually a password. Storing Ansible's `omit`
+# placeholder in a fact and reusing it later works by accident rather than by
+# contract — it is a magic string substituted during task-argument
+# resolution, not a value facts are meant to carry.
 - name: Resolve the password hash
   ansible.builtin.set_fact:
     nyx_password_final: >-
       {{ nyx_password_hash if (nyx_password_hash | default('') | length > 0)
-         else (nyx_password | password_hash('sha512')
-               if (nyx_password | default('') | length > 0)
-               else omit) }}
+         else (nyx_password | password_hash('sha512')) }}
   no_log: true
-  when: getent_passwd[nyx_user] is none
+  when:
+    - getent_passwd[nyx_user] is none
+    - (nyx_password_hash | default('') | length > 0)
+      or (nyx_password | default('') | length > 0)
 
 - name: A new account needs a password
   ansible.builtin.assert:
-    that: nyx_password_final is defined and nyx_password_final != omit
+    that: nyx_password_final is defined
     fail_msg: >-
       {{ nyx_user }} does not exist and no password was given, so the account
       cannot be created. Answer the prompt, or pass
