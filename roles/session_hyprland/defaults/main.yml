@@ -145,15 +145,23 @@ nyx_hypr_packages_apps:
   # that ignores its flags file.
   - code
   - firefox
-  # Video wallpapers. end4-pC scripts/colors/switchwall.sh plays mp4, webm,
-  # mkv, avi and mov through mpvpaper and thumbnails them with ffmpeg. It is
-  # an end4-pC feature: ii has no reference to it, and end4-pC is a cloned
-  # config directory rather than a package, so it declares no dependencies of
-  # its own and nothing else pulls this in.
+  # mpvpaper is NOT here, and video wallpapers therefore do not work.
   #
-  # cachyos/mpvpaper, so a plain repo install — nyx_packages_aur stays empty.
-  # ffmpeg arrives transitively as an mpv dependency.
-  - mpvpaper
+  # It is what end4-pC's scripts/colors/switchwall.sh uses to play mp4, webm,
+  # mkv, avi and mov as wallpapers. cachyos/mpvpaper needs libmpv.so=2-64,
+  # which pacman resolves to cachyos/mpv-git, which needs libbluray.so=3-64 —
+  # and nothing in the repos provides that soname. The transaction cannot be
+  # satisfied, and on a real install it aborted the whole task:
+  #
+  #   :: unable to satisfy dependency 'libbluray.so=3-64' required by mpv-git
+  #   :: unable to satisfy dependency 'libmpv.so=2-64' required by mpvpaper
+  #
+  # That is upstream repo skew rather than anything here, so it will likely
+  # resolve itself. Re-add this line and check with
+  # `pacman -Si mpvpaper && pacman -S --print mpvpaper`.
+  #
+  # Static image wallpapers are unaffected — those are matugen and swww,
+  # neither of which touches mpv.
   # VLC runs through XWayland. Its Wayland output is not usable — VLC 3's is
   # broken, and video comes out cropped or malformed without xorg-xwayland
   # present. Hyprland ships XWayland, so it works; it is just not native.

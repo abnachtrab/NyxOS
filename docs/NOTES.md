@@ -877,3 +877,29 @@ which has no `item`, so a template used inside a loop failed as undefined. It
 now carries a `LOOP_TEMPLATES` map from template name to the variable
 supplying `item`, and renders once per entry — verified to still catch a bad
 attribute reference inside one rather than passing everything blindly.
+
+## mpvpaper is uninstallable, and took greetd with it
+
+A real install failed at session_hyprland's package task:
+
+    :: unable to satisfy dependency libbluray.so=3-64 required by mpv-git
+    :: unable to satisfy dependency libmpv.so=2-64 required by mpvpaper
+
+cachyos/mpvpaper needs libmpv.so=2-64. Pacman resolves that to
+cachyos/mpv-git, which needs libbluray.so=3-64, and nothing in the repos
+provides that soname. Upstream repo skew rather than anything here, so it
+will probably fix itself; re-add the package and check with
+pacman -S --print mpvpaper.
+
+Video wallpapers do not work without it. Static wallpapers are unaffected —
+those go through matugen and swww, neither of which touches mpv.
+
+The second half of this is ours. greetd, greetd-tuigreet and every
+application were installed in one pacman transaction, so one unsatisfiable
+optional package aborted all of it and the machine got no display manager.
+Login packages are now their own transaction, ahead of the applications: an
+app that cannot be resolved still fails the play loudly, but it fails after
+the machine can reach a login rather than instead of it.
+
+The install.sh error output did its job here — stage: provision, the exact
+arch-chroot command, exit 2, and pacman naming both unsatisfied sonames.

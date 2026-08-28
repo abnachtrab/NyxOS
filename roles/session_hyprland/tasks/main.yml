@@ -30,9 +30,19 @@
     upgrade: true
   when: nyx_ii_sysupgrade | bool
 
+# Split from the applications deliberately. These are what makes the machine
+# reach a login at all, so they go in their own transaction: an application
+# that cannot be resolved must not take greetd down with it. That is exactly
+# what happened when cachyos/mpvpaper became unsatisfiable — one optional
+# package aborted the transaction and left a machine with no display manager.
 - name: Login packages
   community.general.pacman:
-    name: "{{ nyx_hypr_dm_packages + nyx_hypr_packages_apps }}"
+    name: "{{ nyx_hypr_dm_packages }}"
+    state: present
+
+- name: Application packages
+  community.general.pacman:
+    name: "{{ nyx_hypr_packages_apps }}"
     state: present
 
 # Steam and the lib32-* halves of gamemode and mangohud need [multilib].
