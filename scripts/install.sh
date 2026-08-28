@@ -344,12 +344,14 @@ STAGE="provision"
 # --- provision ------------------------------------------------------------
 git clone --branch "$BRANCH" "$REPO" /mnt/root/NyxOS
 
-# Defining nyx_password as an extra var makes Ansible skip its vars_prompt.
+# Defining nyx_password_hash as an extra var makes Ansible skip its
+# vars_prompt, and tells roles/base the value is already hashed rather than
+# plaintext for it to hash.
 # VARS_FILE is what the EXIT trap removes, so the hash does not survive a
 # failure between here and the explicit removal below.
 VARS_FILE=/mnt/root/.nyx-vars.yml
 install -m 600 /dev/null "$VARS_FILE"
-printf 'nyx_password: "%s"\n' "$PW_HASH" > "$VARS_FILE"
+printf 'nyx_password_hash: "%s"\n' "$PW_HASH" > "$VARS_FILE"
 unset PW_HASH
 
 # ansible.cfg sets become_ask_pass = True, which makes ansible-playbook prompt

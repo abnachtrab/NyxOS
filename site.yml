@@ -9,13 +9,19 @@
   hosts: localhost
   gather_facts: true
 
+  # No encrypt: here. With it, a blank answer is hashed to the hash of the
+  # empty string rather than staying empty, so "blank to skip" silently
+  # created the user with an empty password. roles/base hashes it instead,
+  # and only when it is actually creating the account.
+  #
+  # vars_prompt cannot be conditional — it runs before any facts exist — so
+  # this is asked even when the user already exists. roles/base reports that
+  # and ignores the answer.
   vars_prompt:
     - name: nyx_password
-      prompt: "Password for the primary user (blank to skip user creation)"
+      prompt: "Password for the primary user (ignored if the account exists)"
       private: true
-      encrypt: sha512_crypt
       confirm: true
-      salt_size: 16
       unsafe: true
 
   roles:

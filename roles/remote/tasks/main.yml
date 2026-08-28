@@ -28,41 +28,79 @@
     dest: /usr/local/bin/nyx-rdp
     mode: "0755"
 
-- name: hypr-rdp config directory
+# --- RDP password ---------------------------------------------------------
+# Generated fresh on every boot rather than supplied. Nothing needs it to
+# persist: it is read off the MOTD when connecting, and hypr-rdp binds to
+# localhost so it sits behind key-only SSH rather than being the boundary.
+- name: RDP password generator
+  ansible.builtin.template:
+    src: nyx-rdp-newpass.j2
+    dest: /usr/local/bin/nyx-rdp-newpass
+    mode: "0755"
+
+- name: RDP password unit
+  ansible.builtin.template:
+    src: nyx-rdp-password.service.j2
+    dest: /etc/systemd/system/nyx-rdp-password.service
+    mode: "0644"
+  notify: reload systemd
+
+- name: Enable the RDP password unit
+  ansible.builtin.systemd_service:
+    name: nyx-rdp-password.service
+    enabled: true
+    daemon_reload: true
+
+# So a config exists before the first reboot. Idempotent in the sense that
+# matters — it rewrites the file every run, which is the point — but reported
+# as changed only when it actually had to create one.
+- name: Generate an initial RDP password
+  ansible.builtin.command:
+    argv: ["/usr/local/bin/nyx-rdp-newpass"]
+  become: true
+  become_user: "{{ nyx_user }}"
+  args:
+    creates: "/home/{{ nyx_user }}/.config/hypr-rdp/config.toml"
+
+# Shown on an interactive SSH login. fish, because nyx_shell is fish and fish
+# does not read /etc/profile.d; /etc/motd is no good either, since it is
+# static and this has to reflect whether the server is actually running.
+- name: Remote status on SSH login
+  ansible.builtin.template:
+    src: nyx-remote-motd.fish.j2
+    dest: /etc/fish/conf.d/nyx-remote-motd.fish
+    mode: "0644"
+
+# --- sunshine -------------------------------------------------------------
+# Sunshine's own default for origin_web_ui_allowed is "lan", which exposes its
+# admin interface to the whole network. This is the one setting worth pinning
+# from Ansible; the rest of its configuration is done through that UI on first
+# run, including the prep commands that call nyx-headless.
+- name: sunshine config directory
   ansible.builtin.file:
-    path: "/home/{{ nyx_user }}/.config/hypr-rdp"
+    path: "/home/{{ nyx_user }}/.config/sunshine"
     state: directory
     owner: "{{ nyx_user }}"
     group: "{{ nyx_user }}"
-    mode: "0700"
+    mode: "0755"
 
-# 0600 and only when a password was supplied. The repo is public, so
-# nyx_rdp_password is empty in defaults and has to come from -e or from
-# host_vars/, which .gitignore excludes.
-- name: hypr-rdp config
-  ansible.builtin.template:
-    src: hypr-rdp.toml.j2
-    dest: "/home/{{ nyx_user }}/.config/hypr-rdp/config.toml"
+- name: Restrict the sunshine web UI
+  ansible.builtin.lineinfile:
+    path: "/home/{{ nyx_user }}/.config/sunshine/sunshine.conf"
+    regexp: '^\s*origin_web_ui_allowed\s*='
+    line: "origin_web_ui_allowed = {{ nyx_sunshine_web_ui_origin }}"
+    create: true
     owner: "{{ nyx_user }}"
     group: "{{ nyx_user }}"
-    mode: "0600"
-  when: nyx_rdp_password | length > 0
-  no_log: true
-
-- name: Warn when no RDP password is set
-  ansible.builtin.debug:
-    msg: >-
-      nyx_rdp_password is empty, so no hypr-rdp config was written. Supply it
-      with -e nyx_rdp_password=... or from host_vars/, which is gitignored.
-      Without it hypr-rdp has no credentials to accept.
-  when: nyx_rdp_password | length == 0
+    mode: "0644"
 
 - name: How to finish setting this up
   ansible.builtin.debug:
     msg:
       - "Desktop:  nyx-rdp            (creates the output, serves it, cleans up on exit)"
+      - "          the password is regenerated each boot and printed when you SSH in"
       - "          client:  ssh -L {{ nyx_rdp_local_port }}:localhost:{{ nyx_rdp_port }} {{ nyx_user }}@<host>"
       - "          then any RDP client to localhost:{{ nyx_rdp_local_port }} - mstsc on Windows"
       - "          not 3389 locally: Windows own RDP already holds that port"
-      - "Games:    https://localhost:{{ nyx_remote_sunshine_ui_port }}, prep do/undo:"
-      - "          /usr/local/bin/nyx-headless up  /  /usr/local/bin/nyx-headless down"
+      - "Games:    https://localhost:{{ nyx_remote_sunshine_ui_port }} through the same tunnel,"
+      - "          prep do/undo: /usr/local/bin/nyx-headless up  /  ... down"

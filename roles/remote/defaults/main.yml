@@ -44,13 +44,18 @@ nyx_rdp_port: 3389
 nyx_rdp_local_port: 13389
 nyx_rdp_username: "{{ nyx_user }}"
 
-# NOT set here, and it must not be: this repo is public. Supply it at run
-# time, or from host_vars/, which .gitignore excludes:
+# The password is NOT supplied here or on the command line. It is generated
+# fresh on every boot by nyx-rdp-password.service and written to
+# ~/.config/hypr-rdp/config.toml at 0600, then shown on an interactive SSH
+# login by the fish drop-in.
 #
-#   ansible-playbook site.yml -e nyx_rdp_password='...'
+# Reusing the account password was considered and rejected: hypr-rdp stores
+# its password in plaintext, while the account password otherwise exists only
+# as a hash in /etc/shadow. Generating instead also keeps it out of `ps` and
+# shell history, which `-e nyx_rdp_password=...` would not.
 #
-# The config file is written 0600 and only when this has a value.
-nyx_rdp_password: ""
+# It is a second factor rather than the boundary — the service binds to
+# localhost, so reaching it already means getting through key-only SSH.
 
 # 30 is upstream's default. Quality is H.264 qp, lower being better.
 nyx_rdp_fps: 60
@@ -64,3 +69,9 @@ nyx_rdp_quality: 23
 # prep commands that create and destroy the headless output. That first-run
 # configuration is not automated here.
 nyx_remote_sunshine_ui_port: 47990
+
+# Sunshine's own default for origin_web_ui_allowed is "lan", which puts its
+# admin interface on the whole network rather than localhost. "pc" restricts
+# it to the machine itself, reachable through the same SSH tunnel as RDP.
+# Set to "lan" to pair from a phone without a tunnel.
+nyx_sunshine_web_ui_origin: "pc"

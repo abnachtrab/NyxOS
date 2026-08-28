@@ -12,9 +12,9 @@ RES="${1:-{{ nyx_remote_resolution }}}"
 CONFIG="${HOME}/.config/hypr-rdp/config.toml"
 if [[ ! -f "$CONFIG" ]]; then
     echo "no ${CONFIG}" >&2
-    echo "The role only writes it when nyx_rdp_password is set. Without it" >&2
+    echo "It is written at boot by nyx-rdp-password.service. Without it" >&2
     echo "hypr-rdp has no credentials and nothing can authenticate:" >&2
-    echo "  ansible-playbook site.yml --tags remote -e nyx_rdp_password='...'" >&2
+    echo "  systemctl start nyx-rdp-password.service" >&2
     exit 1
 fi
 

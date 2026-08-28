@@ -1,0 +1,32 @@
+# NyxOS remote-access status, shown on an interactive SSH login.
+#
+# fish, not /etc/profile.d, because nyx_shell is fish and fish does not read
+# POSIX profile scripts. Not /etc/motd either: that is static and this has to
+# reflect whether the server is actually running.
+#
+# Guarded on SSH_CONNECTION so it says nothing in a local terminal, where the
+# desktop is right there and the password is not needed.
+
+if status is-interactive; and set -q SSH_CONNECTION
+    set -l cfg "$HOME/.config/hypr-rdp/config.toml"
+
+    if pgrep -x hypr-rdp >/dev/null 2>&1
+        set_color green; echo "RDP is up."; set_color normal
+    else
+        set_color yellow; echo "RDP is not running."; set_color normal
+        echo "  start it from a terminal in the Hyprland session:  nyx-rdp"
+    end
+
+    if test -r "$cfg"
+        # Regenerated every boot, so it is only ever shown to whoever already
+        # got through key-only SSH to see it.
+        set -l pw (string replace -rf '^password = "(.*)"$' '$1' < $cfg)
+        echo "  tunnel:   ssh -L {{ nyx_rdp_local_port }}:localhost:{{ nyx_rdp_port }} {{ nyx_user }}@"(hostname)
+        echo "  client:   localhost:{{ nyx_rdp_local_port }}"
+        echo "  user:     {{ nyx_rdp_username }}"
+        echo "  password: $pw"
+    else
+        echo "  no $cfg — run: systemctl start nyx-rdp-password.service"
+    end
+    echo
+end
