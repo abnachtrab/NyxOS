@@ -186,13 +186,22 @@
     enabled: true
     state: started
 
-# Refuse suspend outright on machines that must stay up. ii's hypridle
-# suspends an idle session, and a Hyper-V guest loses eth0 across that —
-# hv_netvsc does not reinitialise, so NetworkManager reports the device
-# unmanaged and the network is gone until it is told to take it back.
+# Refuse suspend outright on machines that must stay up. ii's hypridle has a
+# 900s listener running `systemctl suspend`, and a Hyper-V guest loses eth0
+# across that — hv_netvsc does not reinitialise, so NetworkManager reports the
+# device unmanaged and the network is gone until it is told to take it back.
 #
 # Masked rather than configured away in hypridle.conf, which ./setup install
 # rewrites every run. Screen blanking still works; only sleep is refused.
+#
+# Do not reduce nyx_sleep_targets to sleep.target alone. logind checks the
+# load state of the action target before it emits PrepareForSleep(true), so
+# masking suspend.target makes it refuse up front. Masking only sleep.target
+# would let logind run the whole pre-sleep sequence — including the
+# NetworkManager sleep handling that unmanages the interface — and fail at the
+# final job, which is the bug rather than the fix. sleep.target is in the list
+# for a separate reason: systemd-suspend.service has Requires=sleep.target, so
+# masking it closes the `systemctl start systemd-suspend.service` path.
 - name: Refuse suspend
   ansible.builtin.systemd_service:
     name: "{{ item }}"

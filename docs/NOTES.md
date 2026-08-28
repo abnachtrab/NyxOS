@@ -1009,9 +1009,49 @@ The same masking applies to any machine with remote access enabled, VM or
 not. A desktop that suspends itself is unreachable over RDP exactly when it
 is wanted, which is a policy decision independent of the Hyper-V bug.
 
-Not yet confirmed: that hypridle is the specific trigger rather than
-something else calling systemctl suspend. The masking is correct either way,
-because nothing here should be suspending. If the interface still drops after
-this change, that rules suspend out — check the next boot with:
+The trigger is hypridle, confirmed against upstream rather than inferred.
+dots/.config/hypr/hypridle.conf in end-4/dots-hyprland defines
+$suspend_cmd = systemctl suspend || loginctl suspend and three listeners:
 
+    300s   loginctl lock-session
+    600s   dpms disable / enable on resume
+    900s   $suspend_cmd
+
+That matches the reported timings exactly. The screen blanking before the
+suspend is the 600s listener firing five minutes ahead of the 900s one, and
+the observed resume at 20:33:44 to suspend request at 20:48:47 is 900s to the
+minute. hypridle is started from ii's Hyprland config — hl.exec_cmd("hypridle")
+in hypr/hyprland/execs.lua — not from a systemd user unit.
+
+The journal line names a client: "suspend requested from client PID 3037
+('systemctl') (unit session-3.scope)". That is logind logging a userspace
+caller of its Suspend() method from inside the graphical session, which rules
+out logind's own IdleAction (defaults to ignore, and would not name a client)
+and any host-side or ACPI event.
+
+The battery path is not involved. config.json sets battery.automaticSuspend
+true with suspend at 3%, but ii's Battery.qml gates that on UPower reporting a
+battery, and a Hyper-V Gen2 guest exposes none. It cannot fire here, and it
+cannot fire on a batteryless desktop either.
+
+Masking the action targets, not just sleep.target, is what makes this work.
+logind checks the load state of the action target before emitting
+PrepareForSleep(true), so a masked suspend.target is refused up front. Masking
+sleep.target alone would let the whole pre-sleep sequence run — including the
+NetworkManager sleep handling that unmanages the interface — and fail only at
+the final job. That is worse than no fix. sleep.target stays in the list to
+close the systemctl start systemd-suspend.service path, since that service
+has Requires=sleep.target.
+
+Two consequences worth knowing. The Suspend entry in ii's session menu is now
+a dead control: it runs the same systemctl suspend and fails the same way.
+And the mask does not block the low-level paths — systemd-sleep suspend, echo
+mem > /sys/power/state, or a host-side Hyper-V save-state — so the underlying
+hv_netvsc resume fragility is avoided rather than repaired. If the interface
+is ever found unmanaged again, that is the thing to check first:
+
+    sudo nmcli device set eth0 managed yes
     journalctl -b -1 -g 'suspend|Reached target Sleep|hv_netvsc'
+
+ii is tracked at an unpinned branch (nyx_ii_version: main), so the timeout
+values above are what upstream had when this was diagnosed, not a contract.
