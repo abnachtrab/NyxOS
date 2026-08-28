@@ -277,6 +277,10 @@ cp /etc/pacman.conf                  /mnt/etc/pacman.conf
 cp /etc/pacman.d/mirrorlist          /mnt/etc/pacman.d/
 cp /etc/pacman.d/cachyos*-mirrorlist /mnt/etc/pacman.d/
 cp -a /etc/pacman.d/gnupg            /mnt/etc/pacman.d/
+# Only so the chroot has DNS for pacstrap and the playbook. Removed again
+# after provisioning — see below. arch-chroot does not bind-mount this,
+# so copying it is the usual technique, but leaving it behind gives the
+# installed system the ISO's nameservers as a static file.
 cp /etc/resolv.conf                  /mnt/etc/
 
 STAGE="configure"
@@ -372,6 +376,12 @@ arch-chroot /mnt /bin/bash -Eeuo pipefail -c '
 # removes it without claiming the data is unrecoverable.
 rm -f "$VARS_FILE"
 unset VARS_FILE
+
+# The ISO's resolv.conf was only needed for DNS inside the chroot. Left in
+# place it is a static file holding the ISO's nameservers, sitting where
+# NetworkManager and systemd-resolved both expect to own the path.
+# NetworkManager writes its own on the first connection after boot.
+rm -f /mnt/etc/resolv.conf
 
 STAGE="finish"
 # Unmount here rather than leaving it to the caller: the tree is nested seven

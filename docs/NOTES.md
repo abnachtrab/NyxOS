@@ -968,3 +968,19 @@ touched empty — it reloads and reads the file, and an empty one has not been
 shown to satisfy it.
 
 nyx_ii_suppress_firstrun turns this off if the wizard is ever wanted back.
+
+## The ISO resolv.conf does not belong on the installed system
+
+install.sh copies /etc/resolv.conf from the live environment into the target,
+because arch-chroot does not bind-mount it and the chroot needs DNS for
+pacstrap and the playbook. It is now removed again after provisioning.
+
+Left in place it is a static file holding the ISO nameservers, sitting exactly
+where NetworkManager and systemd-resolved both expect to own the path.
+NetworkManager usually replaces it on the first connection after boot, so this
+is minor rather than breaking — but it does not self-heal when rc-manager is
+set to file or unmanaged, and a static file shadows the systemd-resolved stub
+symlink outright.
+
+Found while investigating an unmanaged eth0 that turned out to be unrelated
+and did not recur.
