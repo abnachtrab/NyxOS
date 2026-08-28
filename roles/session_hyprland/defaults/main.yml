@@ -90,6 +90,22 @@ nyx_wallpaper_dirs:
   - Pictures/Wallpapers
   - Videos/Wallpapers
 
+# The first-run wizard. end4-pC's FirstRunExperience.qml gates on a marker
+# file: present means "already greeted", absent means show the dialog. The
+# "Show next time" toggle rm -f's it to bring the wizard back and writes it
+# to suppress it, so creating the file is the whole mechanism.
+#
+# Created AFTER ./setup install, because the installer has its own opinion —
+# it carries a --firstrun flag and a gen_firstrun() that decides whether this
+# is a first run. Writing it afterwards means ours wins regardless.
+#
+# Path confirmed on a real install: the QML's ${Directories.state} resolves to
+# ~/.local/state/quickshell. A wrong path here would fail silently — the
+# dialog simply appears — so re-check with
+# `find ~/.local/state -name first_run.txt` if it ever comes back.
+nyx_ii_suppress_firstrun: true
+nyx_ii_firstrun_marker: "/home/{{ nyx_user }}/.local/state/quickshell/user/first_run.txt"
+
 # Seed ~/.config/illogical-impulse/config.json from the committed template.
 # Set false to let the shell generate its own defaults instead.
 nyx_ii_shell_config: true

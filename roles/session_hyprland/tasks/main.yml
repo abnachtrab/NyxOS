@@ -287,6 +287,28 @@
     group: "{{ nyx_user }}"
     mode: "0644"
 
+# Suppress the first-run wizard by creating the marker end4-pC checks for.
+# After the installer, so gen_firstrun() cannot undo it.
+- name: First-run marker directory
+  ansible.builtin.file:
+    path: "{{ nyx_ii_firstrun_marker | dirname }}"
+    state: directory
+    owner: "{{ nyx_user }}"
+    group: "{{ nyx_user }}"
+    mode: "0755"
+  when: nyx_ii_suppress_firstrun | bool
+
+# The same content the QML writes, rather than an empty file — it reloads and
+# reads this, and an empty one has not been shown to satisfy it.
+- name: Suppress the first-run wizard
+  ansible.builtin.copy:
+    content: "This file is just here to confirm you've been greeted :>"
+    dest: "{{ nyx_ii_firstrun_marker }}"
+    owner: "{{ nyx_user }}"
+    group: "{{ nyx_user }}"
+    mode: "0644"
+  when: nyx_ii_suppress_firstrun | bool
+
 # --- wallpaper ------------------------------------------------------------
 # Deployed into the picker directory and referenced by
 # background.wallpaperPath in config.json above.

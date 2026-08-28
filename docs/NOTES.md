@@ -940,3 +940,31 @@ Still unverified by this, because installing is not the same as running:
 - `hypr/custom/env.lua` being sourced at all
 - `custom/general.lua` being loaded, and the SUPER+escape bind working
 - `roles/gpu`, which the VM skips entirely
+
+## Suppressing the first-run wizard
+
+end4-pC FirstRunExperience.qml gates on a marker file:
+
+    firstRunFilePath: Directories.state + /user/first_run.txt
+
+Present means already greeted; absent means show the dialog. The
+Show next time toggle in the dialog rm -f s the file to bring the wizard
+back and writes it to suppress it, so creating the file is the entire
+mechanism. Confirmed by toggling it on a real install.
+
+Directories.state resolves to ~/.local/state/quickshell, so the marker is
+~/.local/state/quickshell/user/first_run.txt. That path was verified rather
+than assumed — a wrong one fails silently, since the only symptom is the
+dialog appearing.
+
+The role writes it AFTER ./setup install. The installer has its own opinion:
+a --firstrun / -F flag and a gen_firstrun() in
+sdata/subcmd-install/3.files.sh that decides whether this counts as a first
+run, plus a setup resetfirstrun subcommand that deletes the marker. Writing
+it afterwards means the repo wins regardless of what the installer decided.
+
+The file is written with the same content the QML writes rather than being
+touched empty — it reloads and reads the file, and an empty one has not been
+shown to satisfy it.
+
+nyx_ii_suppress_firstrun turns this off if the wizard is ever wanted back.
