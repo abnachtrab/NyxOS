@@ -1036,7 +1036,13 @@ cannot fire on a batteryless desktop either.
 
 Masking the action targets, not just sleep.target, is what makes this work.
 logind checks the load state of the action target before emitting
-PrepareForSleep(true), so a masked suspend.target is refused up front. Masking
+PrepareForSleep(true), so a masked suspend.target is refused up front. That
+ordering is the whole basis of the fix, and it is verified in systemd's
+source rather than inferred: bus_manager_shutdown_or_sleep_now_or_later in
+src/login/logind-dbus.c calls unit_load_state on the action target and
+returns EACCES with "Unit %s is %s, refusing operation." when it is not
+loaded, and that check sits above the send_prepare_for(m, a, true) call. It
+is unconditional; there is no flag or polkit path around it. Masking
 sleep.target alone would let the whole pre-sleep sequence run — including the
 NetworkManager sleep handling that unmanages the interface — and fail only at
 the final job. That is worse than no fix. sleep.target stays in the list to
