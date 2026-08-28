@@ -903,3 +903,40 @@ the machine can reach a login rather than instead of it.
 
 The install.sh error output did its job here — stage: provision, the exact
 arch-chroot command, exit 2, and pacman naming both unsatisfied sonames.
+
+## The become password prompt was never suppressible
+
+`ansible.cfg` set `become_ask_pass = True`. That prompts at *startup*, before
+any variable is considered, so `-e ansible_become_password=""` in install.sh
+never suppressed it — it only overrode the value afterwards. The prompt
+appeared on every unattended install and accepted anything non-empty, which
+is exactly the kind of thing that looks like it works and is meaningless.
+
+It was also redundant. Everything that runs the playbook by hand already
+passes `--ask-become-pass` itself: `scripts/run.ps1` and the verify commands
+in CLAUDE.md. So the setting is removed rather than worked around, and
+install.sh no longer passes an override it did not need.
+
+Running by hand as a non-root user without `--ask-become-pass` now fails with
+"sudo password required", which is clear.
+
+## Second full install: clean
+
+A complete run after the mpvpaper fix: **80 ok, 48 changed, 19 skipped, 0
+failed, 0 unreachable, 0 rescued, 0 ignored**.
+
+That is the first time the current configuration has executed end to end. It
+covered 27 commits that had never run, including the whole of `roles/remote`,
+the split login/application package transactions, the user-creation rewrite,
+the RDP password service, the fish MOTD drop-in, the gaming stack, the
+Firefox web-app launchers, podman, and the ufw/rclone/jq/sbctl/chwd
+additions.
+
+Still unverified by this, because installing is not the same as running:
+
+- hypr-rdp actually serving a session, and the headless output it serves
+- the RDP password service firing on a real boot, and the MOTD printing it
+- sunshine, which needs hardware encoding the VM does not have
+- `hypr/custom/env.lua` being sourced at all
+- `custom/general.lua` being loaded, and the SUPER+escape bind working
+- `roles/gpu`, which the VM skips entirely

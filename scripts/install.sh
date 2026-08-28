@@ -354,16 +354,16 @@ install -m 600 /dev/null "$VARS_FILE"
 printf 'nyx_password_hash: "%s"\n' "$PW_HASH" > "$VARS_FILE"
 unset PW_HASH
 
-# ansible.cfg sets become_ask_pass = True, which makes ansible-playbook prompt
-# for a become password at startup regardless of already being root. That is
-# right for running the playbook by hand; here it would block an otherwise
-# unattended install. Answering it explicitly keeps the prompt for humans and
-# removes it here; root needs no password.
+# No become password: this runs as root in the chroot. ansible.cfg no longer
+# sets become_ask_pass, which used to prompt at startup — before any variable
+# was considered, so -e ansible_become_password could not suppress it and the
+# prompt accepted anything non-empty. Running the playbook by hand passes
+# --ask-become-pass explicitly instead.
 arch-chroot /mnt /bin/bash -Eeuo pipefail -c '
   cd /root/NyxOS
   ansible-galaxy collection install -r requirements.yml
   ansible-playbook site.yml -c local -i localhost, \
-    -e @/root/.nyx-vars.yml -e ansible_become_password=""
+    -e @/root/.nyx-vars.yml
 ' </dev/null
 
 # shred cannot guarantee anything on btrfs: copy-on-write means the
