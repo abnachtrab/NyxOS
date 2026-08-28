@@ -1061,3 +1061,31 @@ is ever found unmanaged again, that is the thing to check first:
 
 ii is tracked at an unpinned branch (nyx_ii_version: main), so the timeout
 values above are what upstream had when this was diagnosed, not a contract.
+
+## The password prompt is asked by roles/base, not by a vars_prompt
+
+site.yml had a vars_prompt for nyx_password. A vars_prompt runs before any
+fact exists, so it cannot carry a when:. It therefore asked on every run and
+roles/base then reported that the answer was ignored whenever the account
+already existed, which is a question with no purpose.
+
+It also papered over a real gap. install.sh passes nyx_password_hash, and the
+comment there claimed that suppressed the prompt. It does not: Ansible skips a
+vars_prompt only when a variable of the SAME name is already defined, and
+nyx_password_hash is not nyx_password. The prompt was reached on every
+unattended install, read EOF from install.sh's </dev/null, and returned an
+empty string. The install worked because the hash was used instead — by
+accident, not by design.
+
+roles/base now asks with ansible.builtin.pause, which is an ordinary task and
+takes a when:, so the question is put only when the answer will be used: the
+account does not exist and neither nyx_password_hash nor -e nyx_password was
+supplied. Two prompts and an assert replace the vars_prompt's confirm:.
+
+echo: false keeps the input off the screen. The registered value would appear
+at -v, so every task that reads it is no_log. That is weaker than a
+vars_prompt's private: true, and is the one thing given up here.
+
+CLAUDE.md's detect-only verify command no longer needs -e nyx_password=skip.
+The tag never selected roles/base; the flag was there because a vars_prompt
+fires regardless of tags.

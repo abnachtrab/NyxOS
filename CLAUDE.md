@@ -41,7 +41,7 @@ Role gating lives in `site.yml`, not inside roles.
 ## Verify before claiming anything works
 
     ansible-playbook site.yml --syntax-check
-    ansible-playbook site.yml --tags detect -e nyx_password=skip -e ansible_become=false
+    ansible-playbook site.yml --tags detect -e ansible_become=false
 
 Render templates against every profile — a Jinja error is a broken desktop:
 

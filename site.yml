@@ -9,20 +9,11 @@
   hosts: localhost
   gather_facts: true
 
-  # No encrypt: here. With it, a blank answer is hashed to the hash of the
-  # empty string rather than staying empty, so "blank to skip" silently
-  # created the user with an empty password. roles/base hashes it instead,
-  # and only when it is actually creating the account.
-  #
-  # vars_prompt cannot be conditional — it runs before any facts exist — so
-  # this is asked even when the user already exists. roles/base reports that
-  # and ignores the answer.
-  vars_prompt:
-    - name: nyx_password
-      prompt: "Password for the primary user (ignored if the account exists)"
-      private: true
-      confirm: true
-      unsafe: true
+  # No vars_prompt. It cannot be conditional — it runs before any fact
+  # exists — so it asked for a password on every run, then announced that
+  # the answer was ignored whenever the account already existed. roles/base
+  # asks instead, with ansible.builtin.pause, which takes a when: and so only
+  # asks when the answer will be used. -e nyx_password= still works.
 
   roles:
     # ---- always ----------------------------------------------------------

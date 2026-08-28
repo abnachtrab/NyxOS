@@ -52,16 +52,67 @@
 
 - name: Primary user exists
   ansible.builtin.debug:
-    msg: >-
-      {{ nyx_user }} already exists; its password is left alone. Any answer
-      given to the password prompt is ignored.
+    msg: "{{ nyx_user }} already exists; its password is left alone."
   when: getent_passwd[nyx_user] is not none
 
-# install.sh supplies nyx_password_hash, already hashed by openssl. The
-# vars_prompt supplies nyx_password as plaintext, deliberately without
-# encrypt: — with it, a blank answer becomes the hash of the empty string
+# Asked here rather than by a vars_prompt in site.yml. A vars_prompt runs
+# before any fact exists, so it cannot be conditional: it asked on every run
+# and then announced that the answer was ignored. pause is an ordinary task
+# and takes a when:, so the question is only put when the answer is used.
+#
+# This also closes a real gap on the install.sh path. That supplies
+# nyx_password_hash, which does NOT suppress a vars_prompt — Ansible skips a
+# prompt only when a variable of the SAME name is set — so the prompt was
+# reached on every unattended install, read EOF from install.sh's </dev/null
+# and returned empty. It worked by accident. Now the block is genuinely
+# skipped, because the hash is present.
+#
+# echo: false keeps the typing off the screen. The registered value is not
+# printed at default verbosity but would be at -v, so everything that reads
+# it is no_log.
+- name: Password for the new account
+  when:
+    - getent_passwd[nyx_user] is none
+    - (nyx_password_hash | default('') | length == 0)
+    - (nyx_password | default('') | length == 0)
+  block:
+    - name: Prompt for a password
+      ansible.builtin.pause:
+        prompt: "Password for {{ nyx_user }}"
+        echo: false
+      register: nyx_pw_first
+
+    - name: Confirm the password
+      ansible.builtin.pause:
+        prompt: "Confirm"
+        echo: false
+      register: nyx_pw_second
+
+    - name: The two entries must match
+      ansible.builtin.assert:
+        that:
+          - nyx_pw_first.user_input | length > 0
+          - nyx_pw_first.user_input == nyx_pw_second.user_input
+        fail_msg: >-
+          Empty or mismatched. {{ nyx_user }} has not been created and nothing
+          else has been changed; run the playbook again.
+        success_msg: "password accepted"
+      no_log: true
+
+# install.sh supplies nyx_password_hash, already hashed by openssl. A password
+# typed at the prompt above, or given as -e nyx_password=, arrives as
+# plaintext and is hashed here. Deliberately not hashed by a vars_prompt
+# encrypt: — with that, a blank answer became the hash of the empty string
 # rather than staying empty, which silently created an account with an empty
 # password.
+- name: Collect the supplied password
+  ansible.builtin.set_fact:
+    nyx_password_plain: >-
+      {{ nyx_password if (nyx_password | default('') | length > 0)
+         else (nyx_pw_first.user_input | default('')) }}
+  no_log: true
+  when: getent_passwd[nyx_user] is none
+
 # Set only when there is actually a password. Storing Ansible's `omit`
 # placeholder in a fact and reusing it later works by accident rather than by
 # contract — it is a magic string substituted during task-argument
@@ -70,12 +121,12 @@
   ansible.builtin.set_fact:
     nyx_password_final: >-
       {{ nyx_password_hash if (nyx_password_hash | default('') | length > 0)
-         else (nyx_password | password_hash('sha512')) }}
+         else (nyx_password_plain | password_hash('sha512')) }}
   no_log: true
   when:
     - getent_passwd[nyx_user] is none
     - (nyx_password_hash | default('') | length > 0)
-      or (nyx_password | default('') | length > 0)
+      or (nyx_password_plain | default('') | length > 0)
 
 - name: A new account needs a password
   ansible.builtin.assert:
