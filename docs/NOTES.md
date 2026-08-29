@@ -11,6 +11,25 @@ On Hyper-V (Gen 2, `linux-cachyos`, Zen 5 host) unless stated otherwise.
 A full install from the live ISO, boot, login and desktop have all been done
 on the current configuration.
 
+**Session environment**
+
+- `hypr/custom/env.lua` is read, and its profile branching applies.
+  Confirmed in a running Hyper-V session: `env | grep -E
+  'ELECTRON_OZONE|LIBGL_ALWAYS_SOFTWARE'` in a terminal returns
+  `auto` and `1`. The first is set by that file and by nothing else here,
+  so it proves the file loaded; the second is inside `{% if
+  nyx_profile.is_vm %}`, so it proves the branching rendered and took
+  effect. The GPU vendor block is the same mechanism in the same file,
+  so it will apply — though the driver names it sets are still unverified
+  against real hardware.
+- No package owns `/etc/modprobe.d/nvidia.conf`.
+  `pacman -Fx 'etc/modprobe\.d/.*nvidia'` returns nothing across the
+  synced repos, so `roles/gpu` writing that path is not clobbering
+  packaged config and does not need renaming to `nyxos-nvidia.conf`.
+  Checked from the VM: `-F` reads the files database, so this needed no
+  NVIDIA hardware. `pacman -Qo`, which this document used to recommend,
+  could not have answered it — it only reports on installed files.
+
 **Install and boot**
 
 - `install.sh` partitions, pacstraps, chroots and provisions unattended.
@@ -56,38 +75,17 @@ on the current configuration.
 
 ## Not yet verified
 
-- **`hypr/custom/env.lua` actually being sourced.** ii's docs name `custom/`
-  as the override directory and `env.lua` as the file, and the session does
-  start under Hyper-V — but nothing has confirmed the file is what supplies
-  software GL rather than ii doing it some other way. Matters because the
-  same file carries the GPU vendor branching that real hardware will
-  depend on.
-
-  There is no `hyprctl getenv`; it returns "unknown request". This document
-  said to use it, which was wrong. `hl.env()` is setenv inside the
-  compositor, so the thing that proves the file loaded is a client started
-  afterwards. Open a terminal in the session and run:
-
-      env | grep -E 'ELECTRON_OZONE|LIBGL_ALWAYS_SOFTWARE'
-
-  ELECTRON_OZONE_PLATFORM_HINT is the better probe of the two: env.lua sets
-  it unconditionally and nothing else in this repo sets it at all, so it
-  answers the question on every profile rather than only in a VM.
-
-  Reading Hyprland's own /proc/PID/environ does not work — that is the
-  environment it was exec'd with, and setenv after the fact does not appear
-  there. And in fish, which is the login shell, $$ is not the pid; use
-  $fish_pid, or avoid the question by using env as above.
 - **`roles/gpu` on real hardware.** Untestable in Hyper-V — no PCI GPU.
   `-e @profiles/...` exercises the render path, but nothing there proves DKMS
   builds or that modeset takes.
-- **Whether a package owns `/etc/modprobe.d/nvidia.conf`.** If one does, the
-  gpu role is clobbering packaged config and should write
-  `nyxos-nvidia.conf` instead. `pacman -Qo` settles it.
-- **What overrode the sudoers grant.** `99-nyx-ii-temp` lost to something
-  with `NOPASSWD: ALL` in place and `visudo -cf` passing. Renaming to `zz-`
-  and adding `Defaults:<user> !authenticate` fixed it, but the cause is
-  still unknown — `sudo -l -U <user>` while the grant exists would say.
+- **What overrode the sudoers grant — stale, not open.** `99-nyx-ii-temp`
+  lost to something with `NOPASSWD: ALL` in place and `visudo -cf` passing.
+  Renaming to `zz-` and adding `Defaults:<user> !authenticate` fixed it and
+  the cause was never found. It is no longer investigable: the grant exists
+  only for the duration of the AUR block, which a converged machine now
+  skips entirely, so there is nothing for `sudo -l -U <user>` to inspect.
+  Reproducing it would mean recreating the grant deliberately. Listed so it
+  is not mistaken for work that is waiting to be done.
 
 ## Check against upstream before relying on it
 
