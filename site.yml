@@ -1,8 +1,9 @@
 ---
 # NyxOS provisioning entrypoint.
 #
-#   ansible-playbook site.yml                     # as root
+#   ansible-playbook site.yml                     # as root; asks which features
 #   ansible-playbook site.yml --ask-become-pass   # as a normal user
+#   ansible-playbook site.yml -e nyx_remote_enabled=true   # that and nothing else
 #   ansible-playbook site.yml --tags session
 #   ansible-playbook site.yml -e @profiles/nvidia-desktop-v4.json  # force a hw path
 #
@@ -31,6 +32,76 @@
           {{ 'already root, so sudo does not authenticate and --ask-become-pass is not needed'
           if nyx_invoked_uid == '0'
           else 'not root, so tasks escalate with sudo and need --ask-become-pass unless this user has NOPASSWD' }}
+      tags: [always]
+
+    # Feature toggles. Supplying any one of them on the command line is
+    # taken as a complete statement of what is wanted, so the questions are
+    # skipped and everything unsupplied becomes false. Supplying none means
+    # nothing has been said either way, so each is asked.
+    #
+    # Which were supplied has to be collected before any are applied — once
+    # a toggle is set to false it is no longer null, and would then look
+    # like it had been asked for.
+    - name: Which feature toggles were supplied?
+      ansible.builtin.set_fact:
+        nyx_toggles_given: >-
+          {{ (nyx_toggles_given | default([])) + [item.name] }}
+      loop: "{{ nyx_toggles }}"
+      loop_control:
+        label: "{{ item.name }}"
+      when: lookup('vars', item.name, default=None) is not none
+      tags: [always]
+
+    - name: Feature toggles taken from the command line
+      ansible.builtin.debug:
+        msg: >-
+          {{ nyx_toggles_given | default([]) | join(', ') }} given —
+          every other feature is off
+      when: nyx_toggles_given | default([]) | length > 0
+      tags: [always]
+
+    - name: Unsupplied feature toggles are off
+      ansible.builtin.set_fact:
+        "{{ item.name }}": false
+      loop: "{{ nyx_toggles }}"
+      loop_control:
+        label: "{{ item.name }}"
+      when:
+        - nyx_toggles_given | default([]) | length > 0
+        - lookup('vars', item.name, default=None) is none
+      tags: [always]
+
+    # Nothing was said about any of them, so ask. pause needs a terminal:
+    # a non-interactive caller must name at least one toggle, which is what
+    # install.sh does.
+    - name: Choose features
+      when: nyx_toggles_given | default([]) | length == 0
+      tags: [always]
+      block:
+        - name: Ask about each feature
+          ansible.builtin.pause:
+            prompt: "{{ item.prompt }}? [y/N]"
+          loop: "{{ nyx_toggles }}"
+          loop_control:
+            label: "{{ item.name }}"
+          register: nyx_toggle_answers
+
+        # Anything that is not an explicit yes is a no, so pressing return
+        # through the questions produces a machine with no optional
+        # features rather than an unpredictable one.
+        - name: Apply the answers
+          ansible.builtin.set_fact:
+            "{{ item.item.name }}": >-
+              {{ (item.user_input | default('') | trim | lower) in ['y', 'yes'] }}
+          loop: "{{ nyx_toggle_answers.results }}"
+          loop_control:
+            label: "{{ item.item.name }}"
+
+    - name: Features in effect
+      ansible.builtin.debug:
+        msg: >-
+          {% for t in nyx_toggles %}{{ t.name }}={{ lookup('vars', t.name,
+          default='unset') }}{{ ', ' if not loop.last else '' }}{% endfor %}
       tags: [always]
 
   # No vars_prompt. It cannot be conditional — it runs before any fact

@@ -90,6 +90,24 @@ KEYMAP="${NYX_KEYMAP:-us}"
 CMDLINE="${NYX_CMDLINE:-quiet nowatchdog}"
 PRIMARY_USER="${NYX_USER:-abnac}"   # display only; group_vars/all.yml is authoritative
 
+# Feature toggles. site.yml asks about these when none are supplied, and a
+# prompt here would hang: the playbook runs with stdin on /dev/null. So they
+# are always stated explicitly. The defaults are what the playbook did before
+# the toggles existed, so an unattended install is unchanged.
+#
+# Resolved here, at the top, rather than beside the ansible-playbook call: a
+# typo should fail before the disk is touched, not after it is partitioned.
+boolvar() {   # boolvar NAME VALUE -> prints true or false, or fails
+    case "$2" in
+        true|1|yes|y|on)  echo true ;;
+        false|0|no|n|off) echo false ;;
+        *) echo "$1: expected a boolean, got '$2'" >&2; return 1 ;;
+    esac
+}
+REMOTE="$(boolvar NYX_REMOTE "${NYX_REMOTE:-true}")"
+END4PC="$(boolvar NYX_END4PC "${NYX_END4PC:-true}")"
+PROTON_WAYLAND="$(boolvar NYX_PROTON_WAYLAND "${NYX_PROTON_WAYLAND:-true}")"
+
 if [[ "${NYX_FORCE:-0}" != "1" ]] && ! grep -q 'nyxos.auto=1' /proc/cmdline; then
   echo "refusing to format ${DISK}: add nyxos.auto=1 to the kernel cmdline"
   echo "or set NYX_FORCE=1 to override."
@@ -360,7 +378,12 @@ git clone --branch "$BRANCH" "$REPO" /mnt/root/NyxOS
 # failure between here and the explicit removal below.
 VARS_FILE=/mnt/root/.nyx-vars.yml
 install -m 600 /dev/null "$VARS_FILE"
-printf 'nyx_password_hash: "%s"\n' "$PW_HASH" > "$VARS_FILE"
+{
+    printf 'nyx_password_hash: "%s"\n' "$PW_HASH"
+    printf 'nyx_remote_enabled: %s\n'      "$REMOTE"
+    printf 'nyx_end4pc_enabled: %s\n'      "$END4PC"
+    printf 'nyx_hypr_proton_wayland: %s\n' "$PROTON_WAYLAND"
+} > "$VARS_FILE"
 unset PW_HASH
 
 # No become password: this runs as root in the chroot. ansible.cfg no longer

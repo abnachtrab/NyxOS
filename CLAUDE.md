@@ -35,13 +35,21 @@ Role gating lives in `site.yml`, not inside roles.
   win) or, when they need profile branching, a template rendered into
   `custom/` like `env.lua.j2`. Filenames there are upstream's: `env.lua`,
   `general.lua`.
+- **Optional features are asked for, not defaulted.** `nyx_toggles` in
+  `group_vars/all.yml` lists them. Supplying none on the command line makes
+  `site.yml` ask y/n for each; supplying any one skips the questions and
+  turns every unsupplied toggle off. So a run that names a toggle states
+  the whole configuration, and one that names none is interactive. Both
+  verify commands above name one for exactly that reason — without it they
+  stop and ask. `install.sh` always states all three, because its playbook
+  run has stdin on `/dev/null` and a prompt would hang it.
 - Prose in docs and comments is plain and factual. No taglines, no
   editorialising, no second-person asides.
 
 ## Verify before claiming anything works
 
     ansible-playbook site.yml --syntax-check
-    ansible-playbook site.yml --tags detect -e ansible_become=false
+    ansible-playbook site.yml --tags detect -e ansible_become=false -e nyx_remote_enabled=false
 
 Render templates against every profile — a Jinja error is a broken desktop:
 
@@ -54,7 +62,7 @@ machine without the file, and for `env.lua` that means no session in the VM.
 
 **Second-run idempotency is the test that matters**, not first-run success:
 
-    ansible-playbook site.yml --tags base --ask-become-pass   # twice
+    ansible-playbook site.yml --tags base -e nyx_remote_enabled=true   # twice
 
 Drop `--ask-become-pass` when running as root — sudo does not
 authenticate for uid 0, so it asks for a value it never uses. Every run

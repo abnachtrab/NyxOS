@@ -95,7 +95,40 @@ nyx_packages_aur: >-
 # wayvnc for the desktop, sunshine for anything that moves, both on a headless
 # output so a client gets its own resolution. Enabling this also turns on
 # sshd everywhere, since wayvnc is reached through an SSH tunnel.
-nyx_remote_enabled: true
+#
+# null, not true — see nyx_toggles below. null means "not specified",
+# which is what lets site.yml tell an unanswered toggle from a chosen one.
+nyx_remote_enabled: ~
+
+# ---------------------------------------------------------------------------
+# Feature toggles
+# ---------------------------------------------------------------------------
+# Optional features site.yml asks about when none of them are given on the
+# command line. The rule, in full:
+#
+#   none supplied  — ask y/n for each
+#   any supplied   — ask nothing; every unsupplied toggle becomes false
+#
+# So `-e nyx_remote_enabled=true` alone means remote access and nothing
+# else, which is the point: one flag is a complete statement of intent
+# rather than a modification of a default nobody typed.
+#
+# Each entry needs a matching `name: ~` default somewhere, because a
+# variable that is genuinely undefined and one that is null both read as
+# unspecified, but only a defined one can be relied on by a role.
+#
+# Adding a feature here is the whole change; site.yml iterates this list.
+nyx_toggles:
+  - name: nyx_remote_enabled
+    prompt: "Remote access: RDP, Sunshine, and sshd"
+  - name: nyx_end4pc_enabled
+    prompt: "end4-pC Quickshell config on top of illogical-impulse"
+  - name: nyx_hypr_proton_wayland
+    prompt: "Steam and Proton under Wayland"
+
+# Defaults for the toggles above. null is deliberate; do not set true here.
+nyx_end4pc_enabled: ~
+nyx_hypr_proton_wayland: ~
 
 # ---------------------------------------------------------------------------
 # Backup (roles/backup_rclone)

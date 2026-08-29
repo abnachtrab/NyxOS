@@ -1137,3 +1137,39 @@ If pacman reports a package under a name that differs from its AUR package
 name, it reads as missing here and the block is entered exactly as before.
 That degradation is deliberate: the failure mode is the old behaviour, not a
 skipped install.
+
+## Feature toggles are asked for when nothing is said about them
+
+nyx_toggles in group_vars/all.yml lists the optional features: remote access,
+end4-pC, and Proton under Wayland. site.yml resolves them before any role runs:
+
+    none supplied on the command line — ask y/n for each
+    any supplied                     — ask nothing, unsupplied ones are false
+
+Naming one toggle therefore states the entire configuration rather than
+modifying a default nobody typed.
+
+The detection has one requirement that is easy to get wrong. Ansible offers no
+way to ask whether a variable came from -e or from a default, and these were
+previously defined as true in group_vars, so they were always defined. They
+are now null there. null reads as unspecified, an -e value overrides it, and
+the collection pass has to run before anything is applied — once a toggle has
+been set to false it is no longer null and would look like it had been chosen.
+
+Anything that is not an explicit y or yes is a no, so holding return through
+the questions gives a machine with no optional features rather than an
+unpredictable one.
+
+Consequences worth knowing:
+
+- The pre_tasks are tagged always, so --tags detect and --tags base reach them
+  too. Both verify commands in CLAUDE.md now name a toggle; without one they
+  stop and ask.
+- install.sh states all three every run. Its playbook has stdin on /dev/null,
+  so a prompt would hang rather than fail. NYX_REMOTE, NYX_END4PC and
+  NYX_PROTON_WAYLAND override them, and are validated at the top of the script
+  so a typo fails before the disk is touched rather than after it is
+  partitioned. The defaults are true, which is what these were before, so an
+  unattended install is unchanged.
+- Running with a profile alone, -e @profiles/....json, supplies no toggle and
+  so is interactive. Add one to make it not.
