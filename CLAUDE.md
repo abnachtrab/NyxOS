@@ -99,11 +99,17 @@ tasks always reported changed and there was nothing to compare against.
 
 - **`hypr/custom/env.lua` may not be doing anything.** The session starts
   under Hyper-V, but nothing has confirmed that file is what supplies
-  software GL rather than ii doing it another way. `hyprctl getenv` settles
-  it. It also carries the GPU vendor branching real hardware depends on.
-- greetd runs tuigreet, `nyx_packages_aur` is empty, and there is no greeter
-  switch. Both launch paths call `start-hyprland`, owned by the `hyprland`
-  package.
+  software GL rather than ii doing it another way. Open a terminal in the
+  session and run `env | grep ELECTRON_OZONE` — that variable is set by
+  `env.lua` and nothing else here, on every profile. There is no
+  `hyprctl getenv`; it returns "unknown request". Worth settling, because
+  the same file carries the GPU vendor branching real hardware depends on.
+- greetd runs tuigreet and there is no greeter switch. Both launch paths
+  call `start-hyprland`, owned by the `hyprland` package.
+- `nyx_packages_aur` is `['hypr-rdp']` whenever remote access is on, not
+  empty as this said. Gating AUR work on the list being non-empty is what
+  made the temporary sudoers grant write and revoke on every converged run;
+  it is gated on the difference against `pacman -Qq` now.
 - No dotfiles role, deliberately: ii owns the shell. fish is the login shell
   and its config, including the starship prompt, comes from
   `./setup install`.

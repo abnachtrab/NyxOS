@@ -59,9 +59,25 @@ on the current configuration.
 - **`hypr/custom/env.lua` actually being sourced.** ii's docs name `custom/`
   as the override directory and `env.lua` as the file, and the session does
   start under Hyper-V — but nothing has confirmed the file is what supplies
-  software GL rather than ii doing it some other way. `hyprctl getenv | grep
-  LIBGL_ALWAYS_SOFTWARE` settles it. Matters because the same file carries
-  the GPU vendor branching that real hardware will depend on.
+  software GL rather than ii doing it some other way. Matters because the
+  same file carries the GPU vendor branching that real hardware will
+  depend on.
+
+  There is no `hyprctl getenv`; it returns "unknown request". This document
+  said to use it, which was wrong. `hl.env()` is setenv inside the
+  compositor, so the thing that proves the file loaded is a client started
+  afterwards. Open a terminal in the session and run:
+
+      env | grep -E 'ELECTRON_OZONE|LIBGL_ALWAYS_SOFTWARE'
+
+  ELECTRON_OZONE_PLATFORM_HINT is the better probe of the two: env.lua sets
+  it unconditionally and nothing else in this repo sets it at all, so it
+  answers the question on every profile rather than only in a VM.
+
+  Reading Hyprland's own /proc/PID/environ does not work — that is the
+  environment it was exec'd with, and setenv after the fact does not appear
+  there. And in fish, which is the login shell, $$ is not the pid; use
+  $fish_pid, or avoid the question by using env as above.
 - **`roles/gpu` on real hardware.** Untestable in Hyper-V — no PCI GPU.
   `-e @profiles/...` exercises the render path, but nothing there proves DKMS
   builds or that modeset takes.
