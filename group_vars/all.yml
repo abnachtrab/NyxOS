@@ -87,7 +87,7 @@ nyx_packages_base:
 # assuming something is AUR-only. CachyOS carries mpvpaper, sunshine and
 # these two, none of which Arch ships.
 nyx_packages_aur: >-
-  {{ ['hypr-rdp'] if (nyx_remote_enabled | default(false) | bool) else [] }}
+  {{ ['hypr-rdp'] if (nyx_rdp_enabled | default(false) | bool) else [] }}
 
 # ---------------------------------------------------------------------------
 # Remote access (roles/remote)
@@ -96,9 +96,13 @@ nyx_packages_aur: >-
 # output so a client gets its own resolution. Enabling this also turns on
 # sshd everywhere, since wayvnc is reached through an SSH tunnel.
 #
-# null, not true — see nyx_toggles below. null means "not specified",
-# which is what lets site.yml tell an unanswered toggle from a chosen one.
-nyx_remote_enabled: ~
+# Derived, not a toggle: either remote stack means the machine is reachable.
+# roles/base uses it for the sleep policy, and site.yml gates roles/remote
+# on it. Defined here rather than in roles/remote/defaults so that every
+# role can see it — role defaults are only in scope for their own role.
+nyx_remote_enabled: >-
+  {{ (nyx_rdp_enabled | default(false) | bool)
+     or (nyx_sunshine_enabled | default(false) | bool) }}
 
 # ---------------------------------------------------------------------------
 # Feature toggles
@@ -109,9 +113,11 @@ nyx_remote_enabled: ~
 #   none supplied  — ask y/n for each
 #   any supplied   — ask nothing; every unsupplied toggle becomes false
 #
-# So `-e nyx_remote_enabled=true` alone means remote access and nothing
-# else, which is the point: one flag is a complete statement of intent
-# rather than a modification of a default nobody typed.
+# So `-e nyx_rdp_enabled=true` alone means remote desktop and nothing else
+# — no Sunshine, no sshd, no end4-pC. That is the point: one flag is a
+# complete statement of intent rather than a modification of a default
+# nobody typed. Note it also means no sshd, which roles/base refuses when
+# the run is itself over ssh.
 #
 # Each entry needs a matching `name: ~` default somewhere, because a
 # variable that is genuinely undefined and one that is null both read as
@@ -119,14 +125,21 @@ nyx_remote_enabled: ~
 #
 # Adding a feature here is the whole change; site.yml iterates this list.
 nyx_toggles:
-  - name: nyx_remote_enabled
-    prompt: "Remote access: RDP, Sunshine, and sshd"
+  - name: nyx_rdp_enabled
+    prompt: "Remote desktop over RDP"
+  - name: nyx_sunshine_enabled
+    prompt: "Game streaming with Sunshine, for Moonlight clients"
+  - name: nyx_sshd_enabled
+    prompt: "sshd"
   - name: nyx_end4pc_enabled
     prompt: "end4-pC Quickshell config on top of illogical-impulse"
   - name: nyx_hypr_proton_wayland
     prompt: "Steam and Proton under Wayland"
 
 # Defaults for the toggles above. null is deliberate; do not set true here.
+nyx_rdp_enabled: ~
+nyx_sunshine_enabled: ~
+nyx_sshd_enabled: ~
 nyx_end4pc_enabled: ~
 nyx_hypr_proton_wayland: ~
 

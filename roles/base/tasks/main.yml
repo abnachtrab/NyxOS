@@ -279,9 +279,25 @@
     masked: "{{ nyx_inhibit_sleep | bool }}"
   loop: "{{ nyx_sleep_targets }}"
 
-# VMs get sshd so the dev loop works. Physical machines do not, unless
-# something asks for it — remote access needs it, and wayvnc is reached
-# through an SSH tunnel rather than by exposing VNC.
+# Answering no to sshd while connected over SSH would stop the service this
+# play is reaching the machine through. Established connections survive a
+# systemctl stop, so it would not cut the run off mid-play — the next login
+# is what fails, and on a headless machine that is the only way back in.
+# Refused rather than warned about, because the symptom shows up later and
+# somewhere else.
+- name: Not from inside an SSH session
+  ansible.builtin.assert:
+    that: lookup('env', 'SSH_CONNECTION') | length == 0
+    fail_msg: >-
+      sshd is set to off, but this is running over SSH. Disabling it would
+      remove the way back into this machine. Answer yes to the sshd question,
+      or pass -e nyx_sshd_enabled=true, or run it from a local console if
+      that is really the intent.
+    success_msg: "sshd will be disabled"
+  when: not (nyx_sshd_enabled | bool)
+
+# sshd is a toggle now rather than something derived from is_vm, so a VM no
+# longer gets it regardless of what was asked for.
 - name: sshd
   ansible.builtin.systemd_service:
     name: sshd

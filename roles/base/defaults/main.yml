@@ -11,10 +11,14 @@
 # exclusive in the task if the repo should be the sole source of truth.
 nyx_ssh_authorized_keys: []
 
-# sshd. On by default only on VMs, where the dev loop needs it. Remote access
-# turns it on everywhere, because wayvnc is reached through an SSH tunnel
-# rather than by exposing VNC to the network.
-nyx_sshd_enabled: "{{ (nyx_profile.is_vm | bool) or (nyx_remote_enabled | default(false) | bool) }}"
+# sshd is a toggle now, asked for like the rest — see nyx_toggles in
+# group_vars/all.yml. It used to be derived as is_vm or nyx_remote_enabled,
+# which meant a VM always had it whatever was asked for. This default is
+# only the floor; group_vars carries the null that makes it answerable.
+#
+# Turning it off is guarded in tasks/main.yml: doing so from inside an SSH
+# session removes the way back in.
+nyx_sshd_enabled: false
 
 # Machines that must not suspend.
 #
@@ -29,8 +33,12 @@ nyx_sshd_enabled: "{{ (nyx_profile.is_vm | bool) or (nyx_remote_enabled | defaul
 # Masked at the systemd level rather than configured in hypridle.conf,
 # because ./setup install rewrites that file on every run. DPMS blanking is
 # unaffected; only the transition to sleep is refused.
+# sshd counts as well: a machine reached only over ssh is just as
+# unreachable when it suspends as one reached over RDP.
 nyx_inhibit_sleep: >-
-  {{ (nyx_profile.is_vm | bool) or (nyx_remote_enabled | default(false) | bool) }}
+  {{ (nyx_profile.is_vm | bool)
+     or (nyx_remote_enabled | default(false) | bool)
+     or (nyx_sshd_enabled | default(false) | bool) }}
 
 nyx_sleep_targets:
   - sleep.target

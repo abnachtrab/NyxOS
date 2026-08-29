@@ -15,7 +15,15 @@
 # RDP replaced wayvnc here: VNC has no audio, no hardware encoding, and needs
 # a third-party client on every platform.
 
-nyx_remote_enabled: false
+# Split: RDP is the whole-desktop path, sunshine the low-latency game path.
+# Each gates its own tasks; the headless output helper is shared by both and
+# stays ungated, because the role only runs when one of them is on.
+#
+# nyx_remote_enabled is derived from these two and is not a toggle. It is
+# defined in group_vars/all.yml, not here, because roles/base needs it for
+# the sleep policy and role defaults are only in scope for their own role.
+nyx_rdp_enabled: false
+nyx_sunshine_enabled: false
 
 # hypr-rdp is AUR-only. It is the reason nyx_packages_aur is no longer empty;
 # see group_vars/all.yml. sunshine is cachyos, so it stays a repo install.

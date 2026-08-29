@@ -104,7 +104,9 @@ boolvar() {   # boolvar NAME VALUE -> prints true or false, or fails
         *) echo "$1: expected a boolean, got '$2'" >&2; return 1 ;;
     esac
 }
-REMOTE="$(boolvar NYX_REMOTE "${NYX_REMOTE:-true}")"
+RDP="$(boolvar NYX_RDP "${NYX_RDP:-true}")"
+SUNSHINE="$(boolvar NYX_SUNSHINE "${NYX_SUNSHINE:-true}")"
+SSHD="$(boolvar NYX_SSHD "${NYX_SSHD:-true}")"
 END4PC="$(boolvar NYX_END4PC "${NYX_END4PC:-true}")"
 PROTON_WAYLAND="$(boolvar NYX_PROTON_WAYLAND "${NYX_PROTON_WAYLAND:-true}")"
 
@@ -380,7 +382,9 @@ VARS_FILE=/mnt/root/.nyx-vars.yml
 install -m 600 /dev/null "$VARS_FILE"
 {
     printf 'nyx_password_hash: "%s"\n' "$PW_HASH"
-    printf 'nyx_remote_enabled: %s\n'      "$REMOTE"
+    printf 'nyx_rdp_enabled: %s\n'        "$RDP"
+    printf 'nyx_sunshine_enabled: %s\n'   "$SUNSHINE"
+    printf 'nyx_sshd_enabled: %s\n'       "$SSHD"
     printf 'nyx_end4pc_enabled: %s\n'      "$END4PC"
     printf 'nyx_hypr_proton_wayland: %s\n' "$PROTON_WAYLAND"
 } > "$VARS_FILE"

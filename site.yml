@@ -3,7 +3,7 @@
 #
 #   ansible-playbook site.yml                     # as root; asks which features
 #   ansible-playbook site.yml --ask-become-pass   # as a normal user
-#   ansible-playbook site.yml -e nyx_remote_enabled=true   # that and nothing else
+#   ansible-playbook site.yml -e nyx_rdp_enabled=true      # that and nothing else
 #   ansible-playbook site.yml --tags session
 #   ansible-playbook site.yml -e @profiles/nvidia-desktop-v4.json  # force a hw path
 #

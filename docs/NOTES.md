@@ -1187,3 +1187,41 @@ Consequences worth knowing:
   unattended install is unchanged.
 - Running with a profile alone, -e @profiles/....json, supplies no toggle and
   so is interactive. Add one to make it not.
+
+## Remote access is three toggles, not one
+
+The single nyx_remote_enabled question covered RDP, Sunshine and sshd at once,
+which is the wrong shape: RDP is the whole-desktop path and Sunshine is the
+low-latency game path, and wanting one is not wanting the other. It is now
+nyx_rdp_enabled, nyx_sunshine_enabled and nyx_sshd_enabled, asked separately.
+
+nyx_remote_enabled still exists but is derived — rdp or sunshine — and is not
+answerable. It lives in group_vars/all.yml rather than roles/remote/defaults
+because roles/base needs it for the sleep policy, and role defaults are only
+in scope for their own role. roles/remote gates each stack on its own toggle;
+the headless output helper is shared and stays ungated, since the role only
+runs when one of them is on.
+
+nyx_packages_aur is gated on nyx_rdp_enabled specifically. hypr-rdp is the
+only AUR package here, so choosing Sunshine alone now means no AUR work at
+all.
+
+sshd was previously derived as is_vm or nyx_remote_enabled, so a VM always had
+it whatever was asked for. It is a plain toggle now, which introduces a way to
+lock yourself out, so roles/base refuses it:
+
+    - name: Not from inside an SSH session
+      assert:
+        that: lookup('env', 'SSH_CONNECTION') | length == 0
+      when: not (nyx_sshd_enabled | bool)
+
+Established SSH connections survive systemctl stop, so the failure would not
+appear during the run — the next login is what fails, by which point the
+console is the only way back. Refused rather than warned about for that
+reason.
+
+nyx_inhibit_sleep now counts sshd too. A machine reached only over ssh is as
+unreachable when it suspends as one reached over RDP.
+
+install.sh states all five every run, from NYX_RDP, NYX_SUNSHINE, NYX_SSHD,
+NYX_END4PC and NYX_PROTON_WAYLAND, all defaulting to true.

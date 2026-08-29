@@ -49,7 +49,7 @@ Role gating lives in `site.yml`, not inside roles.
 ## Verify before claiming anything works
 
     ansible-playbook site.yml --syntax-check
-    ansible-playbook site.yml --tags detect -e ansible_become=false -e nyx_remote_enabled=false
+    ansible-playbook site.yml --tags detect -e ansible_become=false -e nyx_sshd_enabled=true
 
 Render templates against every profile — a Jinja error is a broken desktop:
 
@@ -62,7 +62,7 @@ machine without the file, and for `env.lua` that means no session in the VM.
 
 **Second-run idempotency is the test that matters**, not first-run success:
 
-    ansible-playbook site.yml --tags base -e nyx_remote_enabled=true   # twice
+    ansible-playbook site.yml --tags base -e nyx_sshd_enabled=true   # twice
 
 Drop `--ask-become-pass` when running as root — sudo does not
 authenticate for uid 0, so it asks for a value it never uses. Every run

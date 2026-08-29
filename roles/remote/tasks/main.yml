@@ -12,6 +12,7 @@
 # user unit to hang off.
 
 - name: Remote access packages
+  when: nyx_sunshine_enabled | bool
   community.general.pacman:
     name: "{{ nyx_remote_packages }}"
     state: present
@@ -23,6 +24,7 @@
     mode: "0755"
 
 - name: RDP launcher
+  when: nyx_rdp_enabled | bool
   ansible.builtin.template:
     src: nyx-rdp.j2
     dest: /usr/local/bin/nyx-rdp
@@ -33,12 +35,14 @@
 # persist: it is read off the MOTD when connecting, and hypr-rdp binds to
 # localhost so it sits behind key-only SSH rather than being the boundary.
 - name: RDP password generator
+  when: nyx_rdp_enabled | bool
   ansible.builtin.template:
     src: nyx-rdp-newpass.j2
     dest: /usr/local/bin/nyx-rdp-newpass
     mode: "0755"
 
 - name: RDP password unit
+  when: nyx_rdp_enabled | bool
   ansible.builtin.template:
     src: nyx-rdp-password.service.j2
     dest: /etc/systemd/system/nyx-rdp-password.service
@@ -46,6 +50,7 @@
   notify: reload systemd
 
 - name: Enable the RDP password unit
+  when: nyx_rdp_enabled | bool
   ansible.builtin.systemd_service:
     name: nyx-rdp-password.service
     enabled: true
@@ -55,6 +60,7 @@
 # matters — it rewrites the file every run, which is the point — but reported
 # as changed only when it actually had to create one.
 - name: Generate an initial RDP password
+  when: nyx_rdp_enabled | bool
   ansible.builtin.command:
     argv: ["/usr/local/bin/nyx-rdp-newpass"]
   become: true
@@ -66,6 +72,7 @@
 # does not read /etc/profile.d; /etc/motd is no good either, since it is
 # static and this has to reflect whether the server is actually running.
 - name: Remote status on SSH login
+  when: nyx_rdp_enabled | bool
   ansible.builtin.template:
     src: nyx-remote-motd.fish.j2
     dest: /etc/fish/conf.d/nyx-remote-motd.fish
@@ -77,6 +84,7 @@
 # from Ansible; the rest of its configuration is done through that UI on first
 # run, including the prep commands that call nyx-headless.
 - name: sunshine config directory
+  when: nyx_sunshine_enabled | bool
   ansible.builtin.file:
     path: "/home/{{ nyx_user }}/.config/sunshine"
     state: directory
@@ -85,6 +93,7 @@
     mode: "0755"
 
 - name: Restrict the sunshine web UI
+  when: nyx_sunshine_enabled | bool
   ansible.builtin.lineinfile:
     path: "/home/{{ nyx_user }}/.config/sunshine/sunshine.conf"
     regexp: '^\s*origin_web_ui_allowed\s*='
