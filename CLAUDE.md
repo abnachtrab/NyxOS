@@ -56,6 +56,10 @@ machine without the file, and for `env.lua` that means no session in the VM.
 
     ansible-playbook site.yml --tags base --ask-become-pass   # twice
 
+Drop `--ask-become-pass` when running as root — sudo does not
+authenticate for uid 0, so it asks for a value it never uses. Every run
+prints which case applies as its first task.
+
 ## Traps already hit, do not repeat
 
 - `ansible.builtin.command` cannot run shell builtins. `command -v` there

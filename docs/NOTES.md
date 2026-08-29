@@ -1089,3 +1089,25 @@ vars_prompt's private: true, and is the one thing given up here.
 CLAUDE.md's detect-only verify command no longer needs -e nyx_password=skip.
 The tag never selected roles/base; the flag was there because a vars_prompt
 fires regardless of tags.
+
+## --ask-become-pass is only needed when not already root
+
+sudo does not authenticate for uid 0. A playbook run as root therefore never
+needs --ask-become-pass, and passing it asks for a value that is collected and
+then discarded. install.sh has always been in that case: it runs as root
+inside the chroot and passes nothing. scripts/run.ps1 connects over ssh as a
+normal user, so it does need the flag.
+
+site.yml now reports which case is in effect as its first task, so the right
+invocation is visible rather than guessed.
+
+Detecting this has a trap worth recording. ansible_user_uid is the wrong fact:
+become applies to the setup module as well, so with escalation enabled the
+fact is gathered by a module already running as root and reports 0 for
+everyone. The invoking user has to be read on the controller before any
+escalation, which is what lookup('pipe', 'id -u') does.
+
+Making become itself conditional on being root was considered and rejected.
+Tasks that drop to nyx_user for AUR builds and the ii installer use
+become_user, which needs the sudo binary whether or not the caller is root, so
+skipping sudo on the root path would not remove the dependency it appears to.

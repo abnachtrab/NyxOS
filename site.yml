@@ -1,13 +1,37 @@
 ---
 # NyxOS provisioning entrypoint.
 #
-#   ansible-playbook site.yml --ask-become-pass
+#   ansible-playbook site.yml                     # as root
+#   ansible-playbook site.yml --ask-become-pass   # as a normal user
 #   ansible-playbook site.yml --tags session
 #   ansible-playbook site.yml -e @profiles/nvidia-desktop-v4.json  # force a hw path
 #
 - name: Provision NyxOS
   hosts: localhost
   gather_facts: true
+
+  vars:
+    # Evaluated on the controller before any escalation, so these are the
+    # user who ran the command, not the user tasks end up running as.
+    # ansible_user_uid cannot be used for this: become applies to the
+    # setup module too, so with escalation on that fact reports 0 no
+    # matter who invoked the playbook.
+    nyx_invoked_uid: "{{ lookup('pipe', 'id -u') }}"
+    nyx_invoked_by: "{{ lookup('pipe', 'id -un') }}"
+
+  # sudo never authenticates for uid 0, so --ask-become-pass is redundant
+  # when this already runs as root: it asks, and the answer is discarded.
+  # Stated at the top of every run so the right invocation is visible
+  # rather than guessed at.
+  pre_tasks:
+    - name: How this run escalates
+      ansible.builtin.debug:
+        msg: >-
+          invoked by {{ nyx_invoked_by }} (uid {{ nyx_invoked_uid }}) —
+          {{ 'already root, so sudo does not authenticate and --ask-become-pass is not needed'
+          if nyx_invoked_uid == '0'
+          else 'not root, so tasks escalate with sudo and need --ask-become-pass unless this user has NOPASSWD' }}
+      tags: [always]
 
   # No vars_prompt. It cannot be conditional — it runs before any fact
   # exists — so it asked for a password on every run, then announced that
