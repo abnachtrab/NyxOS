@@ -181,10 +181,30 @@
   changed_when: false
   failed_when: false
 
+# Gate on what is MISSING, not on what is listed. nyx_packages_aur is
+# non-empty whenever remote access is on (it carries hypr-rdp), so testing
+# the list length made this true on every run: the block was entered only to
+# write the temporary sudoers grant and delete it again, which reported two
+# changed tasks on an otherwise converged machine and meant a second run
+# could never come back clean.
+#
+# A name that pacman reports differently from the AUR package name reads as
+# missing here, which re-enters the block and does exactly what it did
+# before. Degrading to the old behaviour is the intended failure mode.
+- name: Installed packages
+  ansible.builtin.command: pacman -Qq
+  register: nyx_pacman_installed
+  changed_when: false
+
+- name: Which AUR packages are missing?
+  ansible.builtin.set_fact:
+    nyx_aur_missing: >-
+      {{ nyx_packages_aur | difference(nyx_pacman_installed.stdout_lines) }}
+
 - name: Does this run need AUR work?
   ansible.builtin.set_fact:
     nyx_aur_needed: "{{ (nyx_have_helper.rc != 0)
-                        or (nyx_packages_aur | length > 0) }}"
+                        or (nyx_aur_missing | length > 0) }}"
 
 # The grant, everything done while it exists, and its revocation are one
 # block so always: runs on every path. Previously these were sequential
@@ -218,12 +238,12 @@
 
     - name: AUR packages
       kewlfft.aur.aur:
-        name: "{{ nyx_packages_aur }}"
+        name: "{{ nyx_aur_missing }}"
         use: "{{ nyx_aur_helper }}"
         state: present
       become: true
       become_user: "{{ nyx_user }}"
-      when: nyx_packages_aur | length > 0
+      when: nyx_aur_missing | length > 0
   always:
     - name: Revoke temporary passwordless pacman
       ansible.builtin.file:

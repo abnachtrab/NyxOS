@@ -1111,3 +1111,29 @@ Making become itself conditional on being root was considered and rejected.
 Tasks that drop to nyx_user for AUR builds and the ii installer use
 become_user, which needs the sudo binary whether or not the caller is root, so
 skipping sudo on the root path would not remove the dependency it appears to.
+
+## The AUR block ran on every converged run
+
+A second run of --tags base reported 29 ok, 2 changed, 8 skipped. The two were
+always the same pair: writing /etc/sudoers.d/99-nyx-aur-temp and removing it
+again. Nothing else was doing anything.
+
+The gate was
+
+    nyx_aur_needed: (nyx_have_helper.rc != 0) or (nyx_packages_aur | length > 0)
+
+which asks whether packages are listed, not whether any are missing.
+nyx_packages_aur is ['hypr-rdp'] whenever nyx_remote_enabled is true, so the
+second clause was permanently true. The block was entered on every run, found
+the helper present and the package installed, did nothing, and still paid for
+the grant and its revocation. That pair cannot be idempotent by construction:
+it creates a file and deletes it.
+
+Now gated on the difference between nyx_packages_aur and pacman -Qq, so a
+converged machine skips the block entirely and a second run is 0 changed. The
+aur module is given the missing list rather than the full one.
+
+If pacman reports a package under a name that differs from its AUR package
+name, it reads as missing here and the block is entered exactly as before.
+That degradation is deliberate: the failure mode is the old behaviour, not a
+skipped install.

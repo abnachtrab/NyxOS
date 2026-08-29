@@ -60,6 +60,11 @@ Drop `--ask-become-pass` when running as root — sudo does not
 authenticate for uid 0, so it asks for a value it never uses. Every run
 prints which case applies as its first task.
 
+A converged second run reports **0 changed**. It did not until the AUR
+block was gated on missing packages rather than listed ones: the
+temporary sudoers grant was written and revoked on every run, so two
+tasks always reported changed and there was nothing to compare against.
+
 ## Traps already hit, do not repeat
 
 - `ansible.builtin.command` cannot run shell builtins. `command -v` there
