@@ -1225,3 +1225,21 @@ unreachable when it suspends as one reached over RDP.
 
 install.sh states all five every run, from NYX_RDP, NYX_SUNSHINE, NYX_SSHD,
 NYX_END4PC and NYX_PROTON_WAYLAND, all defaulting to true.
+
+## Only decisions belong in nyx_toggles
+
+end4-pC and Proton-under-Wayland were briefly asked about and are not any
+more. They are wanted on every machine, so the question had one sensible
+answer and asking it was noise.
+
+They keep their `true` defaults in roles/session_hyprland, which is the role
+that owns and consumes them, and they are no longer named in group_vars at
+all. That is the whole mechanism: a variable listed in nyx_toggles carries a
+null default so an unanswered toggle can be told from a chosen one, and a
+variable that is not listed just keeps its ordinary default. Both remain
+overridable with -e for a one-off, and install.sh still states them from
+NYX_END4PC and NYX_PROTON_WAYLAND.
+
+The three that remain are real decisions: RDP is the whole desktop, Sunshine
+is game streaming, and sshd determines whether the machine is reachable at
+all.

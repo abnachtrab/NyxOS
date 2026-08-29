@@ -124,6 +124,11 @@ nyx_remote_enabled: >-
 # unspecified, but only a defined one can be relied on by a role.
 #
 # Adding a feature here is the whole change; site.yml iterates this list.
+#
+# Only things worth a decision belong here. end4-pC and Proton-under-Wayland
+# are wanted on every machine, so they are not asked about — they keep the
+# `true` defaults in roles/session_hyprland, which is the role that owns
+# them, and are still overridable with -e for a one-off.
 nyx_toggles:
   - name: nyx_rdp_enabled
     prompt: "Remote desktop over RDP"
@@ -131,17 +136,12 @@ nyx_toggles:
     prompt: "Game streaming with Sunshine, for Moonlight clients"
   - name: nyx_sshd_enabled
     prompt: "sshd"
-  - name: nyx_end4pc_enabled
-    prompt: "end4-pC Quickshell config on top of illogical-impulse"
-  - name: nyx_hypr_proton_wayland
-    prompt: "Steam and Proton under Wayland"
 
 # Defaults for the toggles above. null is deliberate; do not set true here.
+# A toggle with a concrete default cannot be told apart from a chosen one.
 nyx_rdp_enabled: ~
 nyx_sunshine_enabled: ~
 nyx_sshd_enabled: ~
-nyx_end4pc_enabled: ~
-nyx_hypr_proton_wayland: ~
 
 # ---------------------------------------------------------------------------
 # Backup (roles/backup_rclone)

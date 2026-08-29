@@ -36,7 +36,10 @@ Role gating lives in `site.yml`, not inside roles.
   `custom/` like `env.lua.j2`. Filenames there are upstream's: `env.lua`,
   `general.lua`.
 - **Optional features are asked for, not defaulted.** `nyx_toggles` in
-  `group_vars/all.yml` lists them. Supplying none on the command line makes
+  `group_vars/all.yml` lists them: RDP, Sunshine and sshd. Only things
+  worth a decision go there — end4-pC and Proton-under-Wayland are wanted
+  everywhere, so they keep their `true` defaults in the role that owns
+  them and are never asked about. Supplying none on the command line makes
   `site.yml` ask y/n for each; supplying any one skips the questions and
   turns every unsupplied toggle off. So a run that names a toggle states
   the whole configuration, and one that names none is interactive. Both

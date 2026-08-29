@@ -107,6 +107,9 @@ boolvar() {   # boolvar NAME VALUE -> prints true or false, or fails
 RDP="$(boolvar NYX_RDP "${NYX_RDP:-true}")"
 SUNSHINE="$(boolvar NYX_SUNSHINE "${NYX_SUNSHINE:-true}")"
 SSHD="$(boolvar NYX_SSHD "${NYX_SSHD:-true}")"
+# Not questions: end4-pC and Proton-under-Wayland are wanted on every
+# machine and site.yml does not ask about them. Stated anyway so a one-off
+# install can turn them off without editing the repo.
 END4PC="$(boolvar NYX_END4PC "${NYX_END4PC:-true}")"
 PROTON_WAYLAND="$(boolvar NYX_PROTON_WAYLAND "${NYX_PROTON_WAYLAND:-true}")"
 
