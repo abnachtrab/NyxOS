@@ -1243,3 +1243,33 @@ NYX_END4PC and NYX_PROTON_WAYLAND.
 The three that remain are real decisions: RDP is the whole desktop, Sunshine
 is game streaming, and sshd determines whether the machine is reachable at
 all.
+
+## The AUR surface is larger than nyx_packages_aur
+
+nyx_packages_aur names one package, hypr-rdp, and only when RDP is on. That is
+not the whole AUR footprint: ./setup install does its own AUR work, so a
+finished machine carries AUR packages this repo never names. darkly-bin, ii's
+Qt application style, is one of them, and it pulls kirigami2.
+
+yay reports kirigami2 as an orphan. That means the AUR package has no
+maintainer, not that anything is broken, and kirigami2 is the Qt5 Kirigami
+framework, so being unmaintained is ordinary end-of-life rather than neglect.
+It cannot be removed on its own — darkly-bin requires it — and removing both
+costs the Qt theming that makes Qt apps match the rest of the desktop. Left
+alone deliberately.
+
+The practical consequence is about failure surfaces. "One failing AUR package
+aborts the whole run" is recorded elsewhere here and is about the repo's own
+AUR task in roles/base. A break in an ii dependency aborts ./setup install
+instead, which is a different task, a different error, and not something
+gating nyx_packages_aur would prevent.
+
+To see what any of it is and why it is there:
+
+    pactree -r <package>
+    pacman -Qi <package> | grep -E 'Install Reason|Required By'
+
+Not verified from the control node: the AUR is behind bot protection and ii's
+dependency list was not readable from here, so which of ii's groups pulls
+darkly-bin in is still unconfirmed. That neither package comes from this repo
+was confirmed by grep.
